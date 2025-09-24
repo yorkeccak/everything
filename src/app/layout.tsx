@@ -23,34 +23,34 @@ export const metadata: Metadata = {
     process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
   ),
   title: {
-    default: "Bio by Valyu",
-    template: "%s | Bio by Valyu",
+    default: "Everything by Valyu",
+    template: "%s | Everything by Valyu",
   },
   description:
-    "AI-powered bio/healthcare analysis by Valyu. Real-time data, secure Python execution in Daytona sandboxes, and interactive visualizations for research and reporting.",
-  applicationName: "Bio by Valyu",
+    "AI-powered analysis by Valyu. Real-time data, secure Python execution in Daytona sandboxes, and interactive visualizations for research and reporting.",
+  applicationName: "Everything by Valyu",
   openGraph: {
-    title: "Bio by Valyu",
+    title: "Everything by Valyu",
     description:
-      "AI-powered bio/healthcare analysis by Valyu. Real-time data, secure Python execution in Daytona sandboxes, and interactive visualizations for research and reporting.",
+      "AI-powered analysis by Valyu. Real-time data, secure Python execution in Daytona sandboxes, and interactive visualizations for research and reporting.",
     url: "/",
-    siteName: "Bio by Valyu",
+    siteName: "Everything by Valyu",
     images: [
       {
         url: "/valyu.png",
         width: 1200,
         height: 630,
-        alt: "Bio by Valyu",
+        alt: "Everything by Valyu",
       },
     ],
-    locale: "en_US",  
+    locale: "en_US",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Bio by Valyu",
+    title: "Everything by Valyu",
     description:
-      "AI-powered bio/healthcare analysis by Valyu. Real-time data, secure Python execution in Daytona sandboxes, and interactive visualizations for research and reporting.",
+      "AI-powered analysis by Valyu. Real-time data, secure Python execution in Daytona sandboxes, and interactive visualizations for research and reporting.",
     images: ["/valyu.png"],
   },
   icons: {

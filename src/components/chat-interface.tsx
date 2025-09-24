@@ -2,6 +2,8 @@
 
 import { useChat } from "@ai-sdk/react";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
+import React from "react";
+import { MacbookScroll } from "@/components/ui/macbook-scroll";
 import {
   DefaultChatTransport,
   lastAssistantMessageIsCompleteWithToolCalls,
@@ -454,7 +456,7 @@ export const SearchResultCard = ({
   onRemove,
 }: {
   result: any;
-  type: "financial" | "web" | "wiley" | "healthcare";
+  type: "web";
   variant?: "default" | "saved";
   onRemove?: () => void;
 }) => {
@@ -801,24 +803,16 @@ export const SearchResultCard = ({
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-xs text-gray-500 pl-2">
-                  {type === "wiley" ? (
-                    <img
-                      src="/wy.svg"
-                      alt="Wiley"
-                      className="w-10 h-10 dark:invert opacity-80"
-                    />
-                  ) : (
-                    <span className="truncate px-2 rounded text-xs bg-gray-100 dark:bg-gray-800 py-0.5 max-w-[150px]">
-                      {(() => {
-                        try {
-                          const urlObj = new URL(result.url);
-                          return urlObj.hostname.replace(/^www\./, "");
-                        } catch {
-                          return result.url;
-                        }
-                      })()}
-                    </span>
-                  )}
+                  <span className="truncate px-2 rounded text-xs bg-gray-100 dark:bg-gray-800 py-0.5 max-w-[150px]">
+                    {(() => {
+                      try {
+                        const urlObj = new URL(result.url);
+                        return urlObj.hostname.replace(/^www\./, "");
+                      } catch {
+                        return result.url;
+                      }
+                    })()}
+                  </span>
                 </div>
               </div>
             </div>
@@ -839,14 +833,14 @@ export const SearchResultCard = ({
                   {(result.relevanceScore * 100).toFixed(0)}% relevance
                 </span>
               )}
-              {type === "wiley" && result.doi && (
+              {result.doi && (
                 <span className="text-xs bg-amber-100 dark:bg-amber-800/30 text-amber-700 dark:text-amber-300 px-2 py-1 rounded">
                   DOI: {result.doi}
                 </span>
               )}
             </div>
 
-            {type === "wiley" && (result.authors || result.citation) && (
+            {(result.authors || result.citation) && (
               <div className="space-y-1">
                 {result.authors && result.authors.length > 0 && (
                   <div className="text-xs text-gray-600 dark:text-gray-400">
@@ -1138,7 +1132,7 @@ const SearchResultsCarousel = ({
   toolName,
 }: {
   results: any[];
-  type: "financial" | "web" | "wiley" | "healthcare";
+  type: "web";
   messageId: string;
   toolName?: string;
 }) => {
@@ -3534,7 +3528,7 @@ export function ChatInterface({
                         <motion.button
                           onClick={() =>
                             handlePromptClick(
-                              "Find all active Phase 3 clinical trials for metastatic melanoma. Focus on immunotherapy trials, show enrollment numbers, primary endpoints, and compare efficacy data. Create a visualization comparing response rates across different checkpoint inhibitors."
+                              "Search for the latest news about artificial intelligence developments, machine learning breakthroughs, and tech industry updates from the past month."
                             )
                           }
                           className="bg-gray-50 dark:bg-gray-800/50 p-2.5 sm:p-4 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800 text-left group"
@@ -3544,17 +3538,17 @@ export function ChatInterface({
                           whileTap={{ scale: 0.98 }}
                         >
                           <div className="text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2 text-xs sm:text-sm font-medium group-hover:text-gray-900 dark:group-hover:text-gray-100">
-                            🧬 Clinical Trials
+                            💻 Tech & AI
                           </div>
                           <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
-                            Active trials & efficacy data
+                            Latest AI news and tech developments
                           </div>
                         </motion.button>
 
                         <motion.button
                           onClick={() =>
                             handlePromptClick(
-                              "Compare warfarin vs. apixaban for atrial fibrillation. Look up FDA labels for contraindications, drug interactions, and bleeding risks. Search recent literature on real-world effectiveness data and create a comprehensive safety comparison table."
+                              "Aggregate press releases on carbon pricing policies in 2025 from G20 countries. Build a table by country with announced carbon price levels, exemptions, and start dates. Add a short risk assessment."
                             )
                           }
                           className="bg-gray-50 dark:bg-gray-800/50 p-2.5 sm:p-4 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800 text-left group"
@@ -3564,17 +3558,17 @@ export function ChatInterface({
                           whileTap={{ scale: 0.98 }}
                         >
                           <div className="text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2 text-xs sm:text-sm font-medium group-hover:text-gray-900 dark:group-hover:text-gray-100">
-                            💊 Drug Labels
+                            🌎 Policy & Society
                           </div>
                           <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
-                            FDA labels & safety comparisons
+                            Press releases, assessments, and comparisons
                           </div>
                         </motion.button>
 
                         <motion.button
                           onClick={() =>
                             handlePromptClick(
-                              "Search PubMed for the latest CAR-T cell therapy advances in treating B-cell lymphomas. Focus on papers from 2023-2024, summarize response rates, toxicity profiles, and compare different CAR-T products. Include real-world evidence studies."
+                              "List all London exhibitions (Sept–Oct 2025) involving AI-generated art. Extract curator quotes, thematic descriptions, and visitor attendance numbers. Provide an analysis of public reception trends."
                             )
                           }
                           className="bg-gray-50 dark:bg-gray-800/50 p-2.5 sm:p-4 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800 text-left group"
@@ -3584,10 +3578,10 @@ export function ChatInterface({
                           whileTap={{ scale: 0.98 }}
                         >
                           <div className="text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2 text-xs sm:text-sm font-medium group-hover:text-gray-900 dark:group-hover:text-gray-100">
-                            📚 PubMed Search
+                            🎨 Culture & Media
                           </div>
                           <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
-                            Biomedical literature & research papers
+                            Cultural, arts, media and trend analysis
                           </div>
                         </motion.button>
 
@@ -3614,7 +3608,7 @@ export function ChatInterface({
                         <motion.button
                           onClick={() =>
                             handlePromptClick(
-                              "Use Python to perform a survival analysis on breast cancer clinical trial data. Calculate progression-free survival rates, create Kaplan-Meier curves comparing different treatment arms, and identify statistically significant predictors of treatment response."
+                              "Aggregate player performance stats from the 2025 UEFA Champions League quarterfinals. Rank the top 10 players by expected goals vs. actual goals, and highlight the biggest overperformers/underperformers."
                             )
                           }
                           className="bg-gray-50 dark:bg-gray-800/50 p-2.5 sm:p-4 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800 text-left group"
@@ -3624,17 +3618,17 @@ export function ChatInterface({
                           whileTap={{ scale: 0.98 }}
                         >
                           <div className="text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2 text-xs sm:text-sm font-medium group-hover:text-gray-900 dark:group-hover:text-gray-100">
-                            🐍 Biostatistics
+                            🏅 Sports & Events
                           </div>
                           <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
-                            Clinical data analysis & survival curves
+                            Latest games, players, and performance stats
                           </div>
                         </motion.button>
 
                         <motion.button
                           onClick={() =>
                             handlePromptClick(
-                              "Comprehensive analysis of the COVID-19 vaccine race: Compare Pfizer, Moderna, and AstraZeneca's vaccine development timelines, clinical trial results, efficacy data, safety profiles, and market impact. Include SEC filings, stock performance during vaccine announcements, and revenue from vaccine sales. Create visualizations comparing their Phase 3 trial results."
+                              "Retrieve 2025 global policy documents on AI in education. Compare the regulatory approaches of US, EU, and Singapore, focusing on student data privacy."
                             )
                           }
                           className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 p-2.5 sm:p-4 rounded-xl border border-blue-200 dark:border-blue-700 hover:border-blue-300 dark:hover:border-blue-600 transition-colors hover:from-blue-100 hover:to-purple-100 dark:hover:from-blue-900/30 dark:hover:to-purple-900/30 text-left group col-span-1 sm:col-span-2 lg:col-span-1"
@@ -3644,10 +3638,10 @@ export function ChatInterface({
                           whileTap={{ scale: 0.98 }}
                         >
                           <div className="text-blue-700 dark:text-blue-300 mb-1.5 sm:mb-2 text-xs sm:text-sm font-medium group-hover:text-blue-900 dark:group-hover:text-blue-100">
-                            🧬 Vaccine Analysis
+                            🎓 Education & Research
                           </div>
                           <div className="text-[10px] sm:text-xs text-blue-600 dark:text-blue-400">
-                            Multi-company trials + Efficacy data + Market impact
+                            Policy documents, regulations, and research
                           </div>
                         </motion.button>
                       </div>
@@ -4246,26 +4240,20 @@ export function ChatInterface({
                                               ) {
                                                 const p = message.parts[i];
 
-                                                // Check for search tool results (financial, web, wiley, and healthcare tools)
+                                                // Check for search tool results (web search and other tools)
                                                 if (
                                                   (p.type ===
-                                                    "tool-financialSearch" ||
+                                                    "tool-webSearch" ||
                                                     p.type ===
-                                                      "tool-webSearch" ||
+                                                      "tool-readTextFromUrl" ||
                                                     p.type ===
-                                                      "tool-wileySearch" ||
+                                                      "tool-parsePdfFromUrl" ||
                                                     p.type ===
-                                                      "tool-clinicalTrialsSearch" ||
+                                                      "tool-parseDocxFromUrl" ||
                                                     p.type ===
-                                                      "tool-getClinicalTrialDetails" ||
+                                                      "tool-createChart" ||
                                                     p.type ===
-                                                      "tool-drugInformationSearch" ||
-                                                    p.type ===
-                                                      "tool-biomedicalLiteratureSearch" ||
-                                                    p.type ===
-                                                      "tool-pharmaCompanyAnalysis" ||
-                                                    p.type ===
-                                                      "tool-comprehensiveHealthcareSearch") &&
+                                                      "tool-codeExecution") &&
                                                   p.state ===
                                                     "output-available" &&
                                                   p.output
@@ -4328,29 +4316,23 @@ export function ChatInterface({
                                                                 item.relevance_score,
                                                               toolType:
                                                                 p.type ===
-                                                                "tool-financialSearch"
-                                                                  ? "financial"
+                                                                "tool-webSearch"
+                                                                  ? "web"
                                                                   : p.type ===
-                                                                    "tool-wileySearch"
-                                                                  ? "wiley"
+                                                                    "tool-readTextFromUrl"
+                                                                  ? "web"
                                                                   : p.type ===
-                                                                    "tool-clinicalTrialsSearch"
-                                                                  ? "clinical-trials"
+                                                                    "tool-parsePdfFromUrl"
+                                                                  ? "web"
                                                                   : p.type ===
-                                                                    "tool-getClinicalTrialDetails"
-                                                                  ? "clinical-trials"
+                                                                    "tool-parseDocxFromUrl"
+                                                                  ? "web"
                                                                   : p.type ===
-                                                                    "tool-drugInformationSearch"
-                                                                  ? "drug-info"
+                                                                    "tool-createChart"
+                                                                  ? "web"
                                                                   : p.type ===
-                                                                    "tool-biomedicalLiteratureSearch"
-                                                                  ? "biomedical"
-                                                                  : p.type ===
-                                                                    "tool-pharmaCompanyAnalysis"
-                                                                  ? "pharma"
-                                                                  : p.type ===
-                                                                    "tool-comprehensiveHealthcareSearch"
-                                                                  ? "healthcare"
+                                                                    "tool-codeExecution"
+                                                                  ? "web"
                                                                   : "web",
                                                             },
                                                           ];
@@ -4542,142 +4524,6 @@ export function ChatInterface({
                                         break;
                                       }
 
-                                      // Financial Search Tool
-                                      case "tool-financialSearch": {
-                                        const callId = part.toolCallId;
-                                        switch (part.state) {
-                                          case "input-streaming":
-                                            return (
-                                              <div
-                                                key={callId}
-                                                className="mt-2 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded p-2 sm:p-3"
-                                              >
-                                                <div className="flex items-center gap-2 text-purple-700 dark:text-purple-400 mb-2">
-                                                  <span className="text-lg">
-                                                    🔍
-                                                  </span>
-                                                  <span className="font-medium">
-                                                    Financial Search
-                                                  </span>
-                                                  <Clock className="h-3 w-3 animate-spin" />
-                                                </div>
-                                                <div className="text-sm text-purple-600 dark:text-purple-300">
-                                                  Preparing financial data
-                                                  search...
-                                                </div>
-                                              </div>
-                                            );
-                                          case "input-available":
-                                            return (
-                                              <div
-                                                key={callId}
-                                                className="mt-2 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded p-2 sm:p-3"
-                                              >
-                                                <div className="flex items-center gap-2 text-purple-700 dark:text-purple-400 mb-2">
-                                                  <span className="text-lg">
-                                                    🔍
-                                                  </span>
-                                                  <span className="font-medium">
-                                                    Financial Search
-                                                  </span>
-                                                  <Clock className="h-3 w-3 animate-spin" />
-                                                </div>
-                                                <div className="text-sm text-purple-600 dark:text-purple-300">
-                                                  <div className="bg-purple-100 dark:bg-purple-800/30 p-2 rounded">
-                                                    <div className="font-mono text-xs">
-                                                      Query: &quot;
-                                                      {part.input.query}
-                                                      &quot;
-                                                      {part.input.dataType &&
-                                                        part.input.dataType !==
-                                                          "auto" && (
-                                                          <>
-                                                            <br />
-                                                            Type:{" "}
-                                                            {
-                                                              part.input
-                                                                .dataType
-                                                            }
-                                                          </>
-                                                        )}
-                                                      {part.input
-                                                        .maxResults && (
-                                                        <>
-                                                          <br />
-                                                          Max Results:{" "}
-                                                          {
-                                                            part.input
-                                                              .maxResults
-                                                          }
-                                                        </>
-                                                      )}
-                                                    </div>
-                                                  </div>
-                                                  <div className="mt-2 text-xs">
-                                                    Searching financial
-                                                    databases and news
-                                                    sources...
-                                                  </div>
-                                                </div>
-                                              </div>
-                                            );
-                                          case "output-available":
-                                            const financialResults =
-                                              extractSearchResults(part.output);
-                                            return (
-                                              <div
-                                                key={callId}
-                                                className="mt-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 sm:p-4"
-                                              >
-                                                <div className="flex items-center justify-between gap-3 mb-4">
-                                                  <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
-                                                    <CheckCircle className="h-4 w-4" />
-                                                    <span className="font-medium">
-                                                      Financial Search Results
-                                                    </span>
-                                                    <span className="text-xs text-green-600 dark:text-green-300">
-                                                      ({financialResults.length}{" "}
-                                                      results)
-                                                    </span>
-                                                  </div>
-                                                  {part.input?.query && (
-                                                    <div
-                                                      className="text-xs font-mono text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded border border-green-200 dark:border-green-700 max-w-[60%] truncate"
-                                                      title={part.input.query}
-                                                    >
-                                                      {part.input.query}
-                                                    </div>
-                                                  )}
-                                                </div>
-                                                <SearchResultsCarousel
-                                                  results={financialResults}
-                                                  type="financial"
-                                                  toolName="financialSearch"
-                                                  messageId={message.id}
-                                                />
-                                              </div>
-                                            );
-                                          case "output-error":
-                                            return (
-                                              <div
-                                                key={callId}
-                                                className="mt-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-2 sm:p-3"
-                                              >
-                                                <div className="flex items-center gap-2 text-red-700 dark:text-red-400 mb-2">
-                                                  <AlertCircle className="h-4 w-4" />
-                                                  <span className="font-medium">
-                                                    Financial Search Error
-                                                  </span>
-                                                </div>
-                                                <div className="text-sm text-red-600 dark:text-red-300">
-                                                  {part.errorText}
-                                                </div>
-                                              </div>
-                                            );
-                                        }
-                                        break;
-                                      }
-
                                       // Web Search Tool
                                       case "tool-webSearch": {
                                         const callId = part.toolCallId;
@@ -4743,7 +4589,7 @@ export function ChatInterface({
                                                   <div className="flex items-center gap-2 text-blue-700 dark:text-blue-400">
                                                     <CheckCircle className="h-4 w-4" />
                                                     <span className="font-medium">
-                                                      Web Search Results
+                                                      Valyu Search Results
                                                     </span>
                                                     <span className="text-xs text-blue-600 dark:text-blue-300">
                                                       ({webResults.length}{" "}
@@ -4777,113 +4623,6 @@ export function ChatInterface({
                                                   <AlertCircle className="h-4 w-4" />
                                                   <span className="font-medium">
                                                     Web Search Error
-                                                  </span>
-                                                </div>
-                                                <div className="text-sm text-red-600 dark:text-red-300">
-                                                  {part.errorText}
-                                                </div>
-                                              </div>
-                                            );
-                                        }
-                                        break;
-                                      }
-
-                                      // Wiley Search Tool
-                                      case "tool-wileySearch": {
-                                        const callId = part.toolCallId;
-                                        switch (part.state) {
-                                          case "input-streaming":
-                                            return (
-                                              <div
-                                                key={callId}
-                                                className="mt-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded p-2 sm:p-3"
-                                              >
-                                                <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 mb-2">
-                                                  <span className="text-lg">
-                                                    📚
-                                                  </span>
-                                                  <span className="font-medium">
-                                                    Wiley Academic Search
-                                                  </span>
-                                                  <Clock className="h-3 w-3 animate-spin" />
-                                                </div>
-                                                <div className="text-sm text-amber-600 dark:text-amber-300">
-                                                  Searching academic journals
-                                                  and textbooks...
-                                                </div>
-                                              </div>
-                                            );
-                                          case "input-available":
-                                            return (
-                                              <div
-                                                key={callId}
-                                                className="mt-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded p-2 sm:p-3"
-                                              >
-                                                <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 mb-2">
-                                                  <span className="text-lg">
-                                                    📚
-                                                  </span>
-                                                  <span className="font-medium">
-                                                    Wiley Academic Search
-                                                  </span>
-                                                  <Clock className="h-3 w-3 animate-spin" />
-                                                </div>
-                                                <div className="text-sm text-amber-600 dark:text-amber-300">
-                                                  <div className="font-medium">
-                                                    Searching for: &quot;
-                                                    {part.input.query}&quot;
-                                                  </div>
-                                                </div>
-                                                <div className="mt-2 text-xs">
-                                                  Searching academic finance
-                                                  literature...
-                                                </div>
-                                              </div>
-                                            );
-                                          case "output-available":
-                                            const wileyResults =
-                                              extractSearchResults(part.output);
-                                            return (
-                                              <div
-                                                key={callId}
-                                                className="mt-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 sm:p-4"
-                                              >
-                                                <div className="flex items-center justify-between gap-3 mb-4">
-                                                  <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
-                                                    <CheckCircle className="h-4 w-4" />
-                                                    <span className="font-medium">
-                                                      Wiley Academic Results
-                                                    </span>
-                                                    <span className="text-xs text-amber-600 dark:text-amber-300">
-                                                      ({wileyResults.length}{" "}
-                                                      results)
-                                                    </span>
-                                                  </div>
-                                                  {part.input?.query && (
-                                                    <div className="text-xs text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-800/30 px-2 py-1 rounded">
-                                                      &quot;{part.input.query}
-                                                      &quot;
-                                                    </div>
-                                                  )}
-                                                </div>
-                                                <SearchResultsCarousel
-                                                  results={wileyResults}
-                                                  type="wiley"
-                                                  toolName="wileySearch"
-                                                  messageId={message.id}
-                                                />
-                                              </div>
-                                            );
-                                          case "output-error":
-                                            return (
-                                              <div
-                                                key={callId}
-                                                className="mt-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-2 sm:p-3"
-                                              >
-                                                <div className="flex items-center gap-2 text-red-700 dark:text-red-400 mb-2">
-                                                  <AlertCircle className="h-4 w-4" />
-                                                  <span className="font-medium">
-                                                    Wiley Search Error
                                                   </span>
                                                 </div>
                                                 <div className="text-sm text-red-600 dark:text-red-300">
@@ -5064,19 +4803,8 @@ export function ChatInterface({
                                         }
                                         break;
                                       }
-
-                                      // Clinical Trials Search Tool
-                                      case "tool-clinicalTrialsSearch":
-                                      // Get Clinical Trial Details Tool
-                                      case "tool-getClinicalTrialDetails":
-                                      // Drug Information Search Tool
-                                      case "tool-drugInformationSearch":
-                                      // Biomedical Literature Search Tool
-                                      case "tool-biomedicalLiteratureSearch":
-                                      // Pharma Company Analysis Tool
-                                      case "tool-pharmaCompanyAnalysis":
-                                      // Comprehensive Healthcare Search Tool
-                                      case "tool-comprehensiveHealthcareSearch": {
+                                      // Comprehensive Search Tool
+                                      case "tool-comprehensiveSearch": {
                                         const callId = part.toolCallId;
                                         switch (part.state) {
                                           case "input-streaming":
@@ -5106,14 +4834,13 @@ export function ChatInterface({
                                                       "tool-pharmaCompanyAnalysis" &&
                                                       "Analyzing Pharmaceutical Company"}
                                                     {part.type ===
-                                                      "tool-comprehensiveHealthcareSearch" &&
-                                                      "Comprehensive Healthcare Search"}
+                                                      "tool-comprehensiveSearch" &&
+                                                      "Comprehensive Search"}
                                                   </span>
                                                   <Clock className="h-3 w-3 animate-spin" />
                                                 </div>
                                                 <div className="text-sm text-indigo-600 dark:text-indigo-300">
-                                                  Searching healthcare
-                                                  databases...
+                                                  Searching databases...
                                                 </div>
                                               </div>
                                             );
@@ -5144,8 +4871,8 @@ export function ChatInterface({
                                                       "tool-pharmaCompanyAnalysis" &&
                                                       "Analyzing Pharmaceutical Company"}
                                                     {part.type ===
-                                                      "tool-comprehensiveHealthcareSearch" &&
-                                                      "Comprehensive Healthcare Search"}
+                                                      "tool-comprehensiveSearch" &&
+                                                      "Comprehensive Search"}
                                                   </span>
                                                   <Clock className="h-3 w-3 animate-spin" />
                                                 </div>
@@ -5181,7 +4908,7 @@ export function ChatInterface({
                                                     </div>
                                                   </div>
                                                   <div className="mt-2 text-xs">
-                                                    Retrieving healthcare data
+                                                    Retrieving data
                                                     from specialized sources...
                                                   </div>
                                                 </div>
@@ -5276,7 +5003,7 @@ export function ChatInterface({
                                                     0 ? (
                                                       <SearchResultsCarousel
                                                         results={detailResults}
-                                                        type="healthcare"
+                                                        type="web"
                                                         toolName="getClinicalTrialDetails"
                                                         messageId={message.id}
                                                       />
@@ -5372,7 +5099,7 @@ export function ChatInterface({
                                                 )}
                                                 <SearchResultsCarousel
                                                   results={healthcareResults}
-                                                  type="healthcare"
+                                                  type="web"
                                                   toolName={
                                                     part.type ===
                                                     "tool-clinicalTrialsSearch"

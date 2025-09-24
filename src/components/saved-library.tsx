@@ -214,7 +214,7 @@ export function SavedLibrary({
               >
                 <SearchResultCard
                   result={mappedItem}
-                  type={originalItem?.type ?? "web"}
+                  type="web"
                   variant="saved"
                   onRemove={() => saved.remove(mappedItem.id)}
                 />

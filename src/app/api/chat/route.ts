@@ -1,5 +1,5 @@
 import { streamText, convertToModelMessages } from "ai";
-import { healthcareTools } from "@/lib/tools";
+import { everythingTools } from "@/lib/tools";
 import { HealthcareUIMessage } from "@/lib/types";
 import { openai, createOpenAI } from "@ai-sdk/openai";
 import { createOllama, ollama } from "ollama-ai-provider-v2";
@@ -384,7 +384,7 @@ export async function POST(req: Request) {
     const result = streamText({
       model: selectedModel as any,
       messages: convertToModelMessages(messages),
-      tools: healthcareTools,
+      tools: everythingTools,
       toolChoice: "auto",
       experimental_context: {
         userId: user?.id,
@@ -399,7 +399,7 @@ export async function POST(req: Request) {
           include: ["reasoning.encrypted_content"],
         },
       },
-      system: `You are a specialized healthcare and biomedical AI assistant with access to comprehensive tools for clinical trials, drug information, biomedical literature, pharmaceutical analysis, Python code execution, and data visualization.
+      system: `You are a specialized AI assistant with access to comprehensive tools for clinical trials, drug information, biomedical literature, pharmaceutical analysis, Python code execution, and data visualization.
       
       CRITICAL CITATION INSTRUCTIONS:
       When you use ANY search tool (financial, web, or Wiley academic search) and reference information from the results in your response:
@@ -428,8 +428,8 @@ export async function POST(req: Request) {
          - Look up drug information using the drugInformationSearch tool (FDA labels, contraindications, side effects, drug interactions)
          - Search biomedical literature using the biomedicalLiteratureSearch tool (PubMed, ArXiv, peer-reviewed papers)
          - Analyze pharmaceutical companies using the pharmaCompanyAnalysis tool (SEC filings, financial data, competitive intelligence)
-         - Perform comprehensive healthcare searches using the comprehensiveHealthcareSearch tool (across all medical data sources)  
-         - Search the web for general healthcare news, medical breakthroughs, and health policy updates using the webSearch tool
+         - Perform comprehensive searches using the comprehensive everythingSearch tool (across all medical data sources)  
+         - Search the web for general news, medical breakthroughs, and health policy updates using the webSearch tool
          - Search the web for general information using the web search tool (any topic with relevance scoring and cost control)
          - Create interactive charts and visualizations using the chart creation tool (line charts, bar charts, area charts with multiple data series)
 
@@ -438,7 +438,7 @@ export async function POST(req: Request) {
       **CRITICAL INSTRUCTIONS**: Your reports must be incredibly thorough and detailed, explore everything that is relevant to the user's query that will help to provide
       the perfect response that is of a level expected of an elite level medical researcher or pharmaceutical analyst at a leading biomedical research institution.
       
-      For healthcare data searches, you can access:
+      For data searches, you can access:
       • Clinical trials from ClinicalTrials.gov (phases, enrollment, outcomes)
       • FDA drug labels and medication information from DailyMed
       • Biomedical literature from PubMed and ArXiv
@@ -537,7 +537,7 @@ export async function POST(req: Request) {
          Choose the drugInformationSearch tool for FDA drug labels and medication information.
          Choose the biomedicalLiteratureSearch tool for scientific papers and research studies.
          Choose the pharmaCompanyAnalysis tool for pharmaceutical company analysis and competitive intelligence.
-         Choose the comprehensiveHealthcareSearch tool when you need data from multiple healthcare sources.
+         Choose the comprehensiveeverythingSearch tool when you need data from multiple sources.
          Choose the web search tool for general topics, current events, research, and non-financial information.
          Choose the chart creation tool when users want to visualize data, compare metrics, or see trends over time.
 

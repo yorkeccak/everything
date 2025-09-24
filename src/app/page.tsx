@@ -773,7 +773,7 @@ function HomeContent() {
                   }}
                   transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
                 >
-                  Bio
+                  Everything
                 </motion.h1>
 
                 {/* "By Valyu" that slides out from under */}
@@ -832,13 +832,14 @@ function HomeContent() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2, duration: 0.6, ease: "easeOut" }}
               >
-                The world&apos;s most powerful open-source bio AI assistant.
-                Access clinical trials, drug labels, PubMed literature, and
-                pharmaceutical intelligence.
+                The world&apos;s most powerful open-source AI assistant. Access
+                all the data you need with one query.
               </motion.p>
             </motion.div>
           )}
         </AnimatePresence>
+
+        
 
         {/* Chat Interface */}
         <motion.div
