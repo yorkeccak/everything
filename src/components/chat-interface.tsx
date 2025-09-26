@@ -3,7 +3,6 @@
 import { useChat } from "@ai-sdk/react";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import React from "react";
-import { MacbookScroll } from "@/components/ui/macbook-scroll";
 import {
   DefaultChatTransport,
   lastAssistantMessageIsCompleteWithToolCalls,
@@ -46,6 +45,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { VirtualizedContentDialog } from "@/components/virtualized-content-dialog";
+import { NewsCarousel } from "@/components/news-carousel";
 import {
   useState,
   useRef,
@@ -3468,7 +3468,7 @@ export function ChatInterface({
             {/* Messages */}
             <div
               ref={messagesContainerRef}
-              className={`space-y-4 sm:space-y-8 min-h-[300px] overflow-y-auto overflow-x-hidden ${
+              className={`space-y-4 sm:space-y-8 overflow-y-auto overflow-x-hidden ${
                 messages.length > 0 ? "pt-20 sm:pt-24" : "pt-2 sm:pt-4"
               } ${isFormAtBottom ? "pb-32 sm:pb-36" : "pb-4 sm:pb-8"}`}
             >
@@ -3479,7 +3479,7 @@ export function ChatInterface({
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.5 }}
                 >
-                  <div className="text-center mb-6 sm:mb-8">
+                  <div className="text-center mb-4 sm:mb-6">
                     {/* Capabilities */}
                     <div className="max-w-4xl mx-auto">
                       {/* Fast Mode Toggle */}
@@ -3646,8 +3646,30 @@ export function ChatInterface({
                         </motion.button>
                       </div>
 
-                      <div className="mt-4 sm:mt-8">
-                        <DataSourceLogos />
+                      <div className="mt-2 sm:mt-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                              Live News
+                            </h3>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                              Powered by Valyu
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => {
+                              handlePromptClick(
+                                "Search for the latest trending news"
+                              );
+        
+                            }}
+                            className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline dark:hover:text-blue-300 transition-colors cursor-pointer"
+                          >
+                            more
+                          </button>
+                        </div>
+                        <NewsCarousel />
                       </div>
                     </div>
                   </div>
@@ -4908,8 +4930,8 @@ export function ChatInterface({
                                                     </div>
                                                   </div>
                                                   <div className="mt-2 text-xs">
-                                                    Retrieving data
-                                                    from specialized sources...
+                                                    Retrieving data from
+                                                    specialized sources...
                                                   </div>
                                                 </div>
                                               </div>

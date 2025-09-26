@@ -10,6 +10,8 @@ import Image from "next/image";
 import { track } from "@vercel/analytics";
 import { createClient } from "@/utils/supabase/client";
 import { LibraryBig } from "lucide-react";
+import React from "react";
+import { Cover } from "@/components/ui/cover";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +20,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
+import { LatestNews } from "@/components/latest-news";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -732,12 +735,12 @@ function HomeContent() {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col pt-0">
+      <div className="flex-1 flex flex-col pt-0 overflow-hidden">
         {/* Header - Animate out when messages appear */}
         <AnimatePresence mode="wait">
           {!hasMessages && (
             <motion.div
-              className="text-center pt-12 sm:pt-16 pb-6 sm:pb-4 px-4 sm:px-0"
+              className="text-center pt-8 sm:pt-10 pb-0 sm:pb-0 px-4 sm:px-0"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20, transition: { duration: 0.3 } }}
@@ -773,7 +776,7 @@ function HomeContent() {
                   }}
                   transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
                 >
-                  Everything
+                  <Cover>Everything</Cover>
                 </motion.h1>
 
                 {/* "By Valyu" that slides out from under */}
@@ -838,8 +841,6 @@ function HomeContent() {
             </motion.div>
           )}
         </AnimatePresence>
-
-        
 
         {/* Chat Interface */}
         <motion.div
