@@ -3660,7 +3660,7 @@ export function ChatInterface({
                           <button
                             onClick={() => {
                               handlePromptClick(
-                                "Search for the latest trending news"
+                                "Search for the latest news on bio and pharmeceutical research"
                               );
         
                             }}
