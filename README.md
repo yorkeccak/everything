@@ -46,7 +46,7 @@ Information is everywhere, but accessing it is fragmented across countless datab
 - Node.js 18+
 - npm or yarn
 - OpenAI API key
-- Valyu API key (get one at [platform.valyu.network](https://platform.valyu.network))
+- Valyu API key (get one at [platform.valyu.ai](https://platform.valyu.ai))
 - Daytona API key (for code execution)
 
 **For Local AI Models:**
@@ -212,7 +212,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## 🙏 Acknowledgments
 
-- Built with [Valyu](https://platform.valyu.network) - The unified knowledge API
+- Built with [Valyu](https://platform.valyu.ai) - The unified knowledge API
 - Powered by [Daytona](https://daytona.io) - Secure code execution
 - UI components from [shadcn/ui](https://ui.shadcn.com)
 

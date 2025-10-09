@@ -171,10 +171,10 @@ export function RateLimitDialog({ open, onOpenChange, resetTime, onShowAuth }: R
     track('Platform Clickthrough', {
       source: 'rate_limit_dialog',
       action: 'build_your_own',
-      url: 'https://platform.valyu.network/?utm_source=finance.valyu.network&utm_medium=rate_limit_dialog'
+      url: 'https://platform.valyu.ai/?utm_source=finance.valyu.ai&utm_medium=rate_limit_dialog'
     });
     
-    window.open('https://platform.valyu.network/?utm_source=finance.valyu.network&utm_medium=rate_limit_dialog', '_blank');
+    window.open('https://platform.valyu.ai/?utm_source=finance.valyu.ai&utm_medium=rate_limit_dialog', '_blank');
   };
 
   const handleCreateAccount = () => {
@@ -187,7 +187,7 @@ export function RateLimitDialog({ open, onOpenChange, resetTime, onShowAuth }: R
     onOpenChange(false);
   };
 
-  const codeSnippet = `curl -X POST "https://api.valyu.network/v1/search" \\
+  const codeSnippet = `curl -X POST "https://api.valyu.ai/v1/search" \\
   -H "Authorization: x-api-key your_api_key" \\
   -H "Content-Type: application/json" \\
   -d '{"query": "latest tesla MD&A 10-k", "max_results": 2}'`;

@@ -3993,7 +3993,7 @@ export function ChatInterface({
                         Powered by
                       </span>
                       <a
-                        href="https://platform.valyu.network"
+                        href="https://platform.valyu.ai"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center hover:scale-105 transition-transform"

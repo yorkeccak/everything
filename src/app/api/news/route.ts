@@ -14,7 +14,7 @@ async function fetchNewsData() {
     throw new Error("Valyu API key not configured");
   }
 
-  const valyu = new Valyu(valyuApiKey, "https://api.valyu.network/v1");
+  const valyu = new Valyu(valyuApiKey, "https://api.valyu.ai/v1");
 
   // Search for international news from different countries and sources
   const newsQueries = [
