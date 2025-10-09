@@ -109,7 +109,7 @@ export function AuthModal({ open, onClose, onSignUpSuccess }: AuthModalProps) {
       <DialogContent className="max-w-xs border-0 shadow-2xl bg-white dark:bg-gray-950 p-8">
         <DialogHeader className="text-center pb-6">
           <DialogTitle className="text-xl font-normal text-gray-900 dark:text-gray-100">
-            Finance.
+            Everything.
           </DialogTitle>
         </DialogHeader>
 
