@@ -44,46 +44,112 @@ export async function POST(req: Request) {
 
     // If attachments are present, decode and append them to the last user message as AI SDK parts
     try {
-      if (
-        Array.isArray(attachments) &&
-        attachments.length > 0 &&
-        Array.isArray(messages) &&
-        messages.length > 0
-      ) {
+      if (Array.isArray(messages) && messages.length > 0) {
         const lastIdx = messages.map((m: any) => m.role).lastIndexOf("user");
         const targetIdx = lastIdx >= 0 ? lastIdx : messages.length - 1;
         const target = messages[targetIdx] as any;
 
-        const decodedParts = attachments.map((att: any) => {
-          const data = Buffer.from(att.dataBase64 || "", "base64");
-          if (att.kind === "image") {
-            return {
-              type: "image",
-              image: data,
-              mimeType: att.mediaType || "image/png",
-            };
+        const normalizeBinaryPart = (part: any) => {
+          if (!part || typeof part !== "object") {
+            return part;
           }
-          return {
-            type: "file",
-            data,
-            mediaType: att.mediaType || "application/octet-stream",
-            filename: att.name || undefined,
-          };
-        });
 
-        if (Array.isArray(target.parts)) {
-          target.parts = [...target.parts, ...decodedParts];
-        } else if (typeof target.content === "string") {
-          target.parts = [
-            { type: "text", text: target.content },
-            ...decodedParts,
-          ];
-          delete target.content;
+          if (part.type === "image") {
+            if (
+              part.image &&
+              typeof part.image === "object" &&
+              part.image.type === "Buffer" &&
+              Array.isArray(part.image.data)
+            ) {
+              return { ...part, image: Buffer.from(part.image.data) };
+            }
+
+            if (Array.isArray(part.image)) {
+              return { ...part, image: Buffer.from(part.image) };
+            }
+
+            if (typeof part.image === "string") {
+              return { ...part, image: Buffer.from(part.image, "base64") };
+            }
+          } else if (part.type === "file") {
+            if (
+              part.data &&
+              typeof part.data === "object" &&
+              part.data.type === "Buffer" &&
+              Array.isArray(part.data.data)
+            ) {
+              return { ...part, data: Buffer.from(part.data.data) };
+            }
+
+            if (Array.isArray(part.data)) {
+              return { ...part, data: Buffer.from(part.data) };
+            }
+
+            if (typeof part.data === "string") {
+              return { ...part, data: Buffer.from(part.data, "base64") };
+            }
+          }
+
+          return part;
+        };
+
+        const targetHasMediaParts =
+          (Array.isArray(target?.parts) &&
+            target.parts.some(
+              (part: any) =>
+                part?.type === "image" || part?.type === "file"
+            )) ||
+          (Array.isArray(target?.content) &&
+            target.content.some(
+              (part: any) =>
+                part?.type === "image" || part?.type === "file"
+            ));
+
+        if (
+          Array.isArray(attachments) &&
+          attachments.length > 0 &&
+          !targetHasMediaParts
+        ) {
+          const decodedParts = attachments.map((att: any) => {
+            const data = Buffer.from(att.dataBase64 || "", "base64");
+            if (att.kind === "image") {
+              return {
+                type: "image",
+                image: data,
+                mimeType: att.mediaType || "image/png",
+              };
+            }
+            return {
+              type: "file",
+              data,
+              mediaType: att.mediaType || "application/octet-stream",
+              filename: att.name || undefined,
+            };
+          });
+
+          if (Array.isArray(target.parts)) {
+            target.parts = [
+              ...target.parts.map(normalizeBinaryPart),
+              ...decodedParts,
+            ];
+          } else if (typeof target.content === "string") {
+            target.parts = [
+              { type: "text", text: target.content },
+              ...decodedParts,
+            ];
+            delete target.content;
+          } else if (Array.isArray(target.content)) {
+            target.content = [
+              ...target.content.map(normalizeBinaryPart),
+              ...decodedParts,
+            ];
+          } else {
+            target.parts = decodedParts;
+          }
+        } else if (Array.isArray(target.parts)) {
+          target.parts = target.parts.map(normalizeBinaryPart);
         } else if (Array.isArray(target.content)) {
-          // Some formats may already be content array
-          target.content = [...target.content, ...decodedParts];
-        } else {
-          target.parts = decodedParts;
+          target.content = target.content.map(normalizeBinaryPart);
         }
       }
     } catch (e) {
@@ -792,18 +858,42 @@ async function saveMessageToSession(
     }
 
     // Ensure content is properly formatted for database storage
-    const contentData = {
-      parts: content,
-      contextResources: message.contextResources || null,
-    };
+    const contentData = content;
 
-    const insertData = {
+    // Merge context resources into token usage payload if present
+    const existingTokenUsageSource =
+      (message.token_usage &&
+        typeof message.token_usage === "object" &&
+        message.token_usage !== null &&
+        message.token_usage) ||
+      (message.tokenUsage &&
+        typeof message.tokenUsage === "object" &&
+        message.tokenUsage !== null &&
+        message.tokenUsage);
+
+    let tokenUsage = existingTokenUsageSource
+      ? { ...existingTokenUsageSource }
+      : null;
+
+    if (message.contextResources?.length) {
+      if (tokenUsage) {
+        tokenUsage.contextResources = message.contextResources;
+      } else {
+        tokenUsage = { contextResources: message.contextResources };
+      }
+    }
+
+    const insertData: Record<string, any> = {
       id: crypto.randomUUID(),
       session_id: sessionId,
       role: message.role,
       content: contentData,
       tool_calls: message.tool_calls || message.toolCalls || null,
     };
+
+    if (tokenUsage) {
+      insertData.token_usage = tokenUsage;
+    }
 
     console.log(
       "[saveMessageToSession] Content data structure:",

@@ -56,17 +56,45 @@ export async function GET(
     JSON.stringify({
       session,
       messages: messages.map((msg) => {
-        // Handle both old format (content as parts) and new format (content with parts and contextResources)
-        let parts = msg.content;
-        let contextResources = null;
+        // Handle both legacy format ({parts, contextResources}) and new format (parts array with context in token_usage)
+        const content = msg.content;
+        let parts: any = content;
+        let contextResources: any = null;
 
         if (
-          msg.content &&
-          typeof msg.content === "object" &&
-          "parts" in msg.content
+          content &&
+          typeof content === "object" &&
+          !Array.isArray(content) &&
+          "parts" in content
         ) {
-          parts = msg.content.parts;
-          contextResources = msg.content.contextResources;
+          parts = (content as any).parts;
+          contextResources =
+            (content as any).contextResources ||
+            (content as any).context_resources ||
+            null;
+        } else if (!Array.isArray(content)) {
+          // Normalize string or other shapes into text part array
+          if (typeof content === "string") {
+            parts = [{ type: "text", text: content }];
+          }
+        }
+
+        if (!Array.isArray(parts)) {
+          parts = [];
+        }
+
+        if (!contextResources) {
+          const usage =
+            msg.token_usage && typeof msg.token_usage === "object"
+              ? msg.token_usage
+              : msg.tokenUsage && typeof msg.tokenUsage === "object"
+              ? msg.tokenUsage
+              : null;
+
+          if (usage) {
+            contextResources =
+              usage.contextResources || usage.context_resources || null;
+          }
         }
 
         return {

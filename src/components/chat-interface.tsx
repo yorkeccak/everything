@@ -2433,77 +2433,89 @@ export function ChatInterface({
             user?.id || "anonymous"
           );
           console.log("[prepareSendMessagesRequest] fastMode =", fastMode);
-          let enrichedMessages = messages;
+          const clonedMessages = messages.map((message) => {
+            const cloned: any = { ...message };
+
+            if (Array.isArray((message as any).parts)) {
+              cloned.parts = (message as any).parts.map((part: any) =>
+                part && typeof part === "object" ? { ...part } : part
+              );
+            }
+
+            if (Array.isArray((message as any).content)) {
+              cloned.content = (message as any).content.map((part: any) =>
+                part && typeof part === "object" ? { ...part } : part
+              );
+            }
+
+            return cloned;
+          });
+
+          const enrichedMessages = [...clonedMessages];
+
           if (libraryContextRef.current.length > 0) {
             const pendingContext = libraryContextRef.current;
             lastSentContextRef.current = pendingContext;
             libraryContextRef.current = [];
 
-            const lastUserIndex = [...messages]
+            const lastUserIndex = enrichedMessages
               .map((msg) => msg.role)
               .lastIndexOf("user");
 
             if (lastUserIndex !== -1) {
-              enrichedMessages = messages.map((message, index) => {
-                if (index !== lastUserIndex) return message;
+              const targetMessage: any = {
+                ...enrichedMessages[lastUserIndex],
+              };
 
-                const originalText = (() => {
-                  if (Array.isArray((message as any).parts)) {
-                    const textPart = (message as any).parts.find(
-                      (part: any) =>
-                        part?.type === "text" && typeof part.text === "string"
-                    );
-                    if (textPart) return textPart.text as string;
-                  }
-                  if (typeof (message as any).content === "string") {
-                    return (message as any).content as string;
-                  }
-                  return "";
-                })();
+              const originalText = (() => {
+                if (Array.isArray(targetMessage.parts)) {
+                  const textPart = targetMessage.parts.find(
+                    (part: any) =>
+                      part?.type === "text" && typeof part.text === "string"
+                  );
+                  if (textPart) return textPart.text as string;
+                }
+                if (typeof targetMessage.content === "string") {
+                  return targetMessage.content as string;
+                }
+                return "";
+              })();
 
-                const enrichedText = buildLibraryContextInstruction(
-                  originalText,
-                  pendingContext
+              const enrichedText = buildLibraryContextInstruction(
+                originalText,
+                pendingContext
+              );
+
+              if (Array.isArray(targetMessage.parts)) {
+                const updatedParts = targetMessage.parts.map((part: any) =>
+                  part?.type === "text" ? { ...part, text: enrichedText } : part
                 );
 
-                if (Array.isArray((message as any).parts)) {
-                  const updatedParts = (message as any).parts.map((part: any) =>
-                    part?.type === "text"
-                      ? { ...part, text: enrichedText }
-                      : part
-                  );
-                  if (
-                    !updatedParts.some((part: any) => part?.type === "text")
-                  ) {
-                    updatedParts.push({ type: "text", text: enrichedText });
-                  }
-                  return {
-                    ...message,
-                    parts: updatedParts,
-                    contextResources: pendingContext,
-                  } as typeof message;
+                if (
+                  !updatedParts.some((part: any) => part?.type === "text")
+                ) {
+                  updatedParts.push({ type: "text", text: enrichedText });
                 }
 
-                if (typeof (message as any).content === "string") {
-                  return {
-                    ...message,
-                    content: enrichedText,
-                    contextResources: pendingContext,
-                  } as typeof message;
-                }
+                targetMessage.parts = updatedParts;
+              } else if (typeof targetMessage.content === "string") {
+                targetMessage.content = enrichedText;
+              }
 
-                return message;
-              });
+              targetMessage.contextResources = pendingContext;
+              enrichedMessages[lastUserIndex] = targetMessage;
             }
           }
 
           // Convert any pending dropped files into base64 attachments for the API
+          const attachmentParts: any[] = [];
           let attachments: any[] = [];
           try {
             if (Array.isArray(dropzoneFiles) && dropzoneFiles.length > 0) {
               attachments = await Promise.all(
                 dropzoneFiles.map(async (f) => {
                   const buf = await f.arrayBuffer();
+                  const byteArray = Array.from(new Uint8Array(buf));
                   const dataBase64 = Buffer.from(buf).toString("base64");
                   const isImage = (f.type || "").startsWith("image/");
                   const isPdf =
@@ -2553,6 +2565,25 @@ export function ChatInterface({
                     });
                   }
 
+                  if (isImage) {
+                    attachmentParts.push({
+                      type: "image",
+                      image: byteArray,
+                      mimeType: f.type || "image/png",
+                    });
+                  } else {
+                    attachmentParts.push({
+                      type: "file",
+                      data: byteArray,
+                      mediaType:
+                        f.type ||
+                        (isPdf
+                          ? "application/pdf"
+                          : "application/octet-stream"),
+                      filename: f.name || undefined,
+                    });
+                  }
+
                   return {
                     kind: isImage ? "image" : isPdf ? "pdf" : "file",
                     name: f.name,
@@ -2572,6 +2603,67 @@ export function ChatInterface({
           } catch (e) {
             console.warn("Failed to serialize attachments", e);
           }
+
+          if (attachmentParts.length > 0 && enrichedMessages.length > 0) {
+            const lastUserIndex = enrichedMessages
+              .map((msg) => msg.role)
+              .lastIndexOf("user");
+            const targetIndex =
+              lastUserIndex >= 0
+                ? lastUserIndex
+                : enrichedMessages.length - 1;
+
+            if (targetIndex >= 0) {
+              const targetMessage: any = {
+                ...enrichedMessages[targetIndex],
+              };
+
+              let existingParts: any[] = [];
+              if (Array.isArray(targetMessage.parts)) {
+                existingParts = targetMessage.parts.map((part: any) =>
+                  part && typeof part === "object" ? { ...part } : part
+                );
+              } else if (typeof targetMessage.content === "string") {
+                existingParts = [{ type: "text", text: targetMessage.content }];
+                delete targetMessage.content;
+              } else if (Array.isArray(targetMessage.content)) {
+                existingParts = targetMessage.content.map((part: any) =>
+                  part && typeof part === "object" ? { ...part } : part
+                );
+                delete targetMessage.content;
+              }
+
+              const mediaSignature = new Set(
+                existingParts
+                  .filter(
+                    (part: any) =>
+                      part?.type === "image" || part?.type === "file"
+                  )
+                  .map((part: any) =>
+                    `${part.type}:${part.filename || part.mimeType || part.mediaType || ""}`
+                  )
+              );
+
+              const mergedParts = [
+                ...existingParts,
+                ...attachmentParts.filter((part: any) => {
+                  if (part?.type === "image" || part?.type === "file") {
+                    const signature = `${part.type}:${part.filename || part.mimeType || part.mediaType || ""}`;
+                    if (mediaSignature.has(signature)) {
+                      return false;
+                    }
+                    mediaSignature.add(signature);
+                  }
+
+                  return true;
+                }),
+              ];
+
+              targetMessage.parts = mergedParts;
+              enrichedMessages[targetIndex] = targetMessage;
+            }
+          }
+
           if (user) {
             const supabase = createClient();
             const {
@@ -2635,9 +2727,23 @@ export function ChatInterface({
   useEffect(() => {
     const prevIds = messageIdsRef.current;
     const currentIds = messages.map((msg) => msg.id);
-    const newUserMessage = [...messages]
-      .reverse()
-      .find((msg) => !prevIds.includes(msg.id) && msg.role === "user");
+    const idsChanged =
+      currentIds.length !== prevIds.length ||
+      currentIds.some((id, index) => id !== prevIds[index]);
+    const hasPendingContext = lastSentContextRef.current.length > 0;
+
+    if (!idsChanged && !hasPendingContext) {
+      return;
+    }
+
+    const newUserMessage =
+      idsChanged && hasPendingContext
+        ? [...messages]
+            .reverse()
+            .find(
+              (msg) => !prevIds.includes(msg.id) && msg.role === "user"
+            )
+        : null;
 
     setContextResourceMap((prev) => {
       const next: Record<string, SavedItem[]> = {};
@@ -2647,7 +2753,7 @@ export function ChatInterface({
         }
       });
 
-      if (newUserMessage && lastSentContextRef.current.length > 0) {
+      if (newUserMessage && hasPendingContext) {
         next[newUserMessage.id] = [...lastSentContextRef.current];
       }
 
@@ -2657,14 +2763,14 @@ export function ChatInterface({
         prevKeys.length === nextKeys.length &&
         nextKeys.every((key) => prev[key] === next[key]);
 
-      if (mapsMatch) {
+      if (mapsMatch && !newUserMessage) {
         return prev;
       }
 
       return next;
     });
 
-    if (newUserMessage && lastSentContextRef.current.length > 0) {
+    if (newUserMessage && hasPendingContext) {
       lastSentContextRef.current = [];
     }
 
