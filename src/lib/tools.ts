@@ -1129,7 +1129,7 @@ ${escapeModuleTag(execution.result || "(No output produced)")}
         // Initialize Valyu client (uses default/free tier if no API key)
         const valyu = new Valyu(
           process.env.VALYU_API_KEY,
-          "https://api.valyu.network/v1"
+          "https://api.valyu.ai/v1"
         );
 
         // Configure search options
