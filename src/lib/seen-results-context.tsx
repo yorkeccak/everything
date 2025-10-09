@@ -47,7 +47,7 @@ export function SeenResultsProvider({
   }
   lastSessionKeyRef.current = sessionKey;
   useEffect(() => {
-    if (process.env.NODE_ENV === "production") return;
+    if (process.env.NEXT_PUBLIC_APP_MODE === "production") return;
     (window as any).__seenResults = {
       size: () => storeRef.current.size,
       keys: () => Array.from(storeRef.current.keys()),

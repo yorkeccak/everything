@@ -10,7 +10,7 @@ export function validatePaymentEnvironment(): EnvValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
   
-  const isDevelopment = process.env.NODE_ENV === 'development';
+  const isDevelopment = process.env.NEXT_PUBLIC_APP_MODE === 'development';
   const isProduction = !isDevelopment;
 
   // Core Supabase requirements (always required)
@@ -76,7 +76,7 @@ export function validatePaymentEnvironment(): EnvValidationResult {
 
 export function logEnvironmentStatus(): void {
   const validation = validatePaymentEnvironment();
-  const isDevelopment = process.env.NODE_ENV === 'development';
+  const isDevelopment = process.env.NEXT_PUBLIC_APP_MODE === 'development';
   
   console.log(`[Environment] Running in ${isDevelopment ? 'development' : 'production'} mode`);
   
@@ -94,7 +94,7 @@ export function logEnvironmentStatus(): void {
 }
 
 // Auto-validate on import in production
-if (process.env.NODE_ENV !== 'development') {
+if (process.env.NEXT_PUBLIC_APP_MODE !== 'development') {
   const validation = validatePaymentEnvironment();
   if (!validation.valid) {
     console.error('[Environment] CRITICAL: Missing required environment variables for production');
