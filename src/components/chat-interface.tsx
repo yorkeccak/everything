@@ -336,6 +336,11 @@ const markdownComponents = {
       {children}
     </div>
   ),
+  table: ({ children }: any) => (
+    <div className="overflow-x-auto my-4">
+      <table className="min-w-full">{children}</table>
+    </div>
+  ),
 };
 
 // Memoized Markdown renderer to avoid re-parsing on unrelated state updates
@@ -953,7 +958,7 @@ export const SearchResultCard = ({
                   </span>
                 )}
               </div>
-              <div className="prose prose-sm max-w-none dark:prose-invert">
+              <div className="prose prose-sm max-w-none dark:prose-invert overflow-x-auto">
                 <MemoizedMarkdown
                   text={
                     typeof result.fullContent === "string"
@@ -4346,7 +4351,7 @@ export function ChatInterface({
                                         return (
                                           <div
                                             key={index}
-                                            className="prose prose-sm max-w-none dark:prose-invert"
+                                            className="prose prose-sm max-w-none dark:prose-invert overflow-x-auto"
                                           >
                                             {(() => {
                                               // Collect citations from tool results that appear BEFORE this text part
@@ -4623,7 +4628,7 @@ export function ChatInterface({
                                                   </span>
                                                 </div>
                                                 <div className="text-sm text-green-600 dark:text-green-300">
-                                                  <div className="prose prose-sm max-w-none dark:prose-invert">
+                                                  <div className="prose prose-sm max-w-none dark:prose-invert overflow-x-auto">
                                                     <MemoizedMarkdown
                                                       text={part.output}
                                                     />
