@@ -836,9 +836,14 @@ export const everythingTools = {
     description: `Execute Python code securely in a Daytona Sandbox for financial modeling, data analysis, and calculations. CRITICAL: Always include print() statements to show results. Daytona can also capture rich artifacts (e.g., charts) when code renders images.
 
     IMPORTANT INSTRUCTIONS:
-    - You can only import standard library utilities (math, statistics, etc.), no external packages.
-    - Do **not** under any circumstances attempt to install packages (pip, conda, etc.) or load external files or networks.
-    - Keep everything self-contained in plain Python.
+    - No installs / no network: Do not install, upgrade, or import anything that requires downloads. Use only Python stdlib, NumPy, and pandas already present. If an import is missing, fail fast with a clear message; do not attempt pip or network calls.
+    - Array-safe numerics: Use NumPy for all array operations (np.exp, np.sqrt, np.log, etc.). Do not call math.* on arrays.
+    - Normal CDF / p-values: Do not use SciPy or np.erf. Use a provided norm_cdf that works on scalars and arrays.
+    - Shape discipline: All inputs must be strictly 1-D or 2-D. Before any linear algebra or broadcasting, assert shapes and length alignment (e.g., len(time) == len(event) == X.shape[0]). If a mismatch exists, raise a clear error immediately.
+    - Determinism: Use np.random.default_rng(<fixed_seed>) for randomness.
+    - I/O and side-effects: No background downloads; no writes outside /mnt/data. Keep console output concise and human-readable.
+    - Stability: Standardize numeric features when appropriate; add small ridge terms (e.g., 1e-6) if matrices are near-singular; avoid holding giant (n,p,p) tensors unless necessary.
+    - Clarity on failure: If any step cannot be satisfied under these rules, stop and print a single clear reason (do not auto-retry with different libraries or shapes).
     - Your entire code MUST be strictly **under 10,000 characters** (including all whitespace and comments). If your code is too long, shorten or simplify it.
 
     REQUIRED FORMAT - Your Python code MUST include print statements:
