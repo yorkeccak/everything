@@ -38,9 +38,6 @@ export function LatestNews() {
       }
     });
 
-    console.log(
-      `Extracted ${imageUrlPairs.length} image-URL pairs from ${newsData.length} news articles`
-    );
     return imageUrlPairs;
   };
 

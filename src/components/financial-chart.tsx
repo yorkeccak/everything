@@ -177,11 +177,6 @@ export function FinancialChart({
 
         // If both are valid dates, sort chronologically (earliest first)
         if (dateA && dateB) {
-          console.log(
-            `[Chart Sorting] Parsing dates: "${
-              a.x
-            }" -> ${dateA.toISOString()}, "${b.x}" -> ${dateB.toISOString()}`
-          );
           return dateA.getTime() - dateB.getTime();
         }
 

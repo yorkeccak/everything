@@ -78,10 +78,10 @@ export function logEnvironmentStatus(): void {
   const validation = validatePaymentEnvironment();
   const isDevelopment = process.env.NEXT_PUBLIC_APP_MODE === 'development';
   
-  console.log(`[Environment] Running in ${isDevelopment ? 'development' : 'production'} mode`);
+  // console.log(`[Environment] Running in ${isDevelopment ? 'development' : 'production'} mode`);
   
   if (validation.valid) {
-    console.log('[Environment] ✅ All required environment variables are set');
+    // console.log('[Environment] ✅ All required environment variables are set');
   } else {
     console.error('[Environment] ❌ Missing required environment variables:');
     validation.errors.forEach(error => console.error(`  - ${error}`));

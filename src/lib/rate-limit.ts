@@ -166,13 +166,8 @@ export async function transferAnonymousToUser(userId: string): Promise<void> {
     const anonymousUsage = getAnonymousUsage();
 
     if (anonymousUsage.used === 0) {
-      console.log("[Rate Limit] No anonymous usage to transfer");
       return;
     }
-
-    console.log(
-      `[Rate Limit] Transferring ${anonymousUsage.used} queries to user ${userId}`
-    );
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,

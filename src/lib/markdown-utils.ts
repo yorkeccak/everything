@@ -51,6 +51,7 @@ export function needsCleaning(text: string): boolean {
 
 /**
  * Fixes severely corrupted text caused by LaTeX misinterpretation
+ * IMPORTANT: Only applies fixes when corruption is detected to preserve formatting
  */
 export function cleanFinancialText(text: string): string {
   if (!text || typeof text !== 'string' || !needsCleaning(text)) {
@@ -64,11 +65,12 @@ export function cleanFinancialText(text: string): string {
     // Fix broken numbers like "2 3 . 3 5" → "23.35"
     .replace(/(\d)\s+(\d)\s*\.\s*(\d)\s+(\d)/g, '$1$2.$3$4')
     .replace(/(\d)\s+(\d)\s*\.\s*(\d)/g, '$1$2.$3')
-    // Fix character-level word breaks - most common patterns
+    // Fix character-level word breaks - but NOT single spaces (preserve normal spacing)
+    // Only match when there are 5+ consecutive single-letter-space patterns
     .replace(/\b([a-z])\s+([a-z])\s+([a-z])\s+([a-z])\s+([a-z])\s+([a-z])\s+([a-z])\s+([a-z])\s+([a-z])\s+([a-z])\b/g, '$1$2$3$4$5$6$7$8$9$10')
     .replace(/\b([a-z])\s+([a-z])\s+([a-z])\s+([a-z])\s+([a-z])\s+([a-z])\s+([a-z])\s+([a-z])\s+([a-z])\b/g, '$1$2$3$4$5$6$7$8$9')
     .replace(/\b([a-z])\s+([a-z])\s+([a-z])\s+([a-z])\s+([a-z])\s+([a-z])\s+([a-z])\s+([a-z])\b/g, '$1$2$3$4$5$6$7$8')
     .replace(/\b([a-z])\s+([a-z])\s+([a-z])\s+([a-z])\s+([a-z])\s+([a-z])\s+([a-z])\b/g, '$1$2$3$4$5$6$7')
     .replace(/\b([a-z])\s+([a-z])\s+([a-z])\s+([a-z])\s+([a-z])\s+([a-z])\b/g, '$1$2$3$4$5$6')
-    .replace(/\b([a-z])\s+([a-z])\s+([a-z])\s+([a-z])\s+([a-z])\b/g, '$1$2$3$4$5')
+    .replace(/\b([a-z])\s+([a-z])\s+([a-z])\s+([a-z])\s+([a-z])\b/g, '$1$2$3$4$5');
 }

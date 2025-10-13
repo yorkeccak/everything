@@ -38,13 +38,13 @@ export async function validateAccess(userId: string): Promise<AccessValidationRe
     const isActive = user?.subscription_status === 'active';
     const tier = (isActive && user?.subscription_tier) ? user.subscription_tier : 'free';
 
-    console.log('[Access Validation] Database state:', {
-      userId,
-      subscription_tier: user?.subscription_tier,
-      subscription_status: user?.subscription_status,
-      computed_tier: tier,
-      hasAccess: isActive || tier === 'free'
-    });
+    // console.log('[Access Validation] Database state:', {
+    //   userId,
+    //   subscription_tier: user?.subscription_tier,
+    //   subscription_status: user?.subscription_status,
+    //   computed_tier: tier,
+    //   hasAccess: isActive || tier === 'free'
+    // });
 
     // Unlimited and pay_per_use users have access when active
     // Free users always have access (but with rate limits)

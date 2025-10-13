@@ -133,7 +133,6 @@ export const useAuthStore = create<AuthStore>()(
         // Get initial session
         supabase.auth.getSession().then(({ data: { session } }) => {
           clearTimeout(timeoutId);
-          console.log('Initial session check:', session?.user?.email || 'No user');
           set({ 
             user: session?.user ?? null,
             loading: false
@@ -185,8 +184,7 @@ export const useAuthStore = create<AuthStore>()(
                 
                 if (response.ok) {
                   const data = await response.json();
-                  console.log('[Auth Store] Successfully transferred anonymous usage:', data.message);
-                  
+                
                   // Clear anonymous cookies after successful transfer
                   if (typeof window !== 'undefined') {
                     document.cookie = 'rl_data=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';

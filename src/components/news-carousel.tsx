@@ -80,7 +80,6 @@ export function NewsCarousel() {
 
           // If we have less than 5 items with images, try to fetch fresh news
           if (itemsWithImages.length < 5) {
-            console.log("Not enough images, fetching fresh news...");
             const freshResponse = await fetch("/api/news?refresh=true");
             if (freshResponse.ok) {
               const freshData = await freshResponse.json();
@@ -232,9 +231,9 @@ export function NewsCarousel() {
   // Ensure we have enough items for smooth looping
   const minItemsForLoop = 5;
   if (imageUrlPairs.length < minItemsForLoop) {
-    console.log(
-      `Only ${imageUrlPairs.length} items available, may not loop smoothly`
-    );
+    // console.log(
+    //   `Only ${imageUrlPairs.length} items available, may not loop smoothly`
+    // );
   }
 
   return (

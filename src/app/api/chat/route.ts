@@ -36,10 +36,10 @@ export async function POST(req: Request) {
       sessionId?: string;
       attachments?: any[];
     } = requestData;
-    console.log(
-      "[Chat API] Incoming messages:",
-      JSON.stringify(messages, null, 2)
-    );
+    // console.log(
+    //   "[Chat API] Incoming messages:",
+    //   JSON.stringify(messages, null, 2)
+    // );
 
     // If attachments are present, decode and append them to the last user message as AI SDK parts
     try {
@@ -440,6 +440,161 @@ export async function POST(req: Request) {
       }
     }
 
+    // Calculate approximate token usage for context awareness
+    // GPT-5: 400k context window, 128k max output = 272k safe input limit
+    const MAX_CONTEXT_WINDOW = 400000;
+    const MAX_OUTPUT_TOKENS = 128000;
+    const SAFE_INPUT_LIMIT = MAX_CONTEXT_WINDOW - MAX_OUTPUT_TOKENS; // 272,000 tokens
+
+    // Rough estimate: 1 token ≈ 4 characters for English text (conservative for JSON/structured data)
+    const estimateTokens = (text: string) => Math.ceil(text.length / 4);
+
+    // 1. System Prompt Tokens (this gets sent with EVERY request)
+    // Note: We'll calculate this without contextAwarenessMessage first, then add it to the actual system prompt later
+    const systemPromptText = `You are a specialized AI assistant with access to comprehensive tools for clinical trials, drug information, biomedical literature, pharmaceutical analysis, Python code execution, and data visualization.
+
+      CRITICAL FORMATTING INSTRUCTIONS:
+      - ALWAYS use proper paragraph breaks (blank lines) to separate distinct ideas, topics, or sections
+      - Break up long blocks of text into readable paragraphs (3-5 sentences each)
+      - Use markdown formatting: headers (##, ###), bullet points, numbered lists, and bold text for emphasis
+      - Never generate wall-of-text responses - readability is critical
+
+      CRITICAL SEARCH QUERY INSTRUCTIONS:
+      - When using the webSearch tool, ALWAYS use natural language queries
+      - NEVER use search operator syntax like "site:", "intitle:", "filetype:", etc.
+      - The search API handles query optimization automatically - just describe what you want to find
+      - Example CORRECT: "carbon pricing policies in G20 countries 2025"
+      - Example WRONG: "site:gov carbon pricing G20 2025" or "intitle:carbon pricing"
+      - Keep queries natural and conversational
+
+      CRITICAL CONTEXT WINDOW MONITORING:
+      - You will receive context window status updates after each search tool call
+      - The tool response includes: "Context: X% used, ~Y tokens remaining"
+
+      **PARALLEL SEARCH STRATEGY (IMPORTANT for speed and efficiency):**
+      - When context is BELOW 60%: Make 3-5 parallel searches at once (max 5) for maximum speed
+      - When context is 60-75%: You can still do 2-3 parallel searches, just be more selective
+      - When you see "CONTEXT HIGH (75%+)": Switch to sequential searches, limit to 3-5 more total, reduce maxNumResults to 3-5
+      - When you see "CONTEXT CRITICAL (90%+)": DO NOT make any more searches, wrap up immediately
+
+      **WHY PARALLEL SEARCHES MATTER:**
+      - Parallel searches are MUCH faster (5 parallel searches = ~same time as 1 search)
+      - You should default to parallel searches unless context is high or user needs only one specific thing
+      - When gathering data for tables/comparisons (like "compare X across Y countries"), ALWAYS use parallel searches
+      - Use the context feedback to self-regulate your research depth and avoid hitting the 400k token limit
+      - The webSearch tool accepts maxNumResults parameter (1-20, default 10) - reduce this when context is high to save tokens`; // Abbreviated for length calculation
+
+    const systemPromptTokens = estimateTokens(systemPromptText);
+
+    // 2. Tool Definitions Overhead (conservative estimate: function schemas, descriptions, parameters)
+    const toolDefinitionTokens = 1500; // Conservative estimate for all tool definitions
+
+    // 3. Calculate ALL message tokens (user messages + assistant messages + tool calls + tool responses)
+    let totalMessageTokens = 0;
+    for (const m of messages) {
+      // User/assistant text content from parts array
+      if (Array.isArray(m.parts)) {
+        for (const p of m.parts) {
+          if (p.type === "text" && p.text) {
+            totalMessageTokens += estimateTokens(p.text);
+          }
+          // Account for file parts (approximate overhead)
+          // Note: UIMessage part types don't include "image" - they use "file" for all binary content
+          if (p.type === "file") {
+            totalMessageTokens += 100; // Rough overhead for binary content metadata
+          }
+        }
+      }
+
+      // Also check for content property (in case messages come from API in different format)
+      const messageAsAny = m as any;
+      if (typeof messageAsAny.content === "string") {
+        totalMessageTokens += estimateTokens(messageAsAny.content);
+      } else if (Array.isArray(messageAsAny.content)) {
+        for (const p of messageAsAny.content) {
+          if (p.type === "text" && p.text) {
+            totalMessageTokens += estimateTokens(p.text);
+          }
+          if (p.type === "file" || p.type === "image") {
+            totalMessageTokens += 100;
+          }
+        }
+      }
+
+      // Tool calls (function name + arguments JSON)
+      if ((m as any).toolCalls || (m as any).tool_calls) {
+        const toolCalls = (m as any).toolCalls || (m as any).tool_calls;
+        if (Array.isArray(toolCalls)) {
+          for (const tc of toolCalls) {
+            const toolCallText = JSON.stringify(tc);
+            totalMessageTokens += estimateTokens(toolCallText);
+          }
+        }
+      }
+
+      // Tool responses (result text)
+      if ((m as any).toolResults) {
+        const toolResults = (m as any).toolResults;
+        if (Array.isArray(toolResults)) {
+          for (const tr of toolResults) {
+            const resultText = typeof tr.result === "string" ? tr.result : JSON.stringify(tr.result);
+            totalMessageTokens += estimateTokens(resultText);
+          }
+        }
+      }
+    }
+
+    // 4. Calculate TOTAL input tokens
+    const estimatedInputTokens = systemPromptTokens + toolDefinitionTokens + totalMessageTokens;
+    const estimatedRemainingTokens = SAFE_INPUT_LIMIT - estimatedInputTokens;
+    const contextUtilizationPercent = Math.round(
+      (estimatedInputTokens / SAFE_INPUT_LIMIT) * 100
+    );
+
+    console.log("[Chat API] Context window estimation (DETAILED):", {
+      systemPromptTokens,
+      toolDefinitionTokens,
+      totalMessageTokens,
+      estimatedInputTokens,
+      estimatedRemainingTokens,
+      contextUtilizationPercent,
+      maxContext: MAX_CONTEXT_WINDOW,
+      safeInputLimit: SAFE_INPUT_LIMIT,
+      breakdown: {
+        systemPrompt: `${systemPromptTokens} tokens (${Math.round((systemPromptTokens / estimatedInputTokens) * 100)}%)`,
+        toolDefinitions: `${toolDefinitionTokens} tokens (${Math.round((toolDefinitionTokens / estimatedInputTokens) * 100)}%)`,
+        messages: `${totalMessageTokens} tokens (${Math.round((totalMessageTokens / estimatedInputTokens) * 100)}%)`,
+      }
+    });
+
+    // Build context awareness message for the model
+    let contextAwarenessMessage = "";
+    if (contextUtilizationPercent >= 90) {
+      contextAwarenessMessage = `
+
+🚨 CRITICAL CONTEXT WARNING: You are at ${contextUtilizationPercent}% context capacity (estimated ${estimatedInputTokens.toLocaleString()} / ${SAFE_INPUT_LIMIT.toLocaleString()} tokens). You have approximately ${estimatedRemainingTokens.toLocaleString()} tokens remaining.
+
+IMMEDIATE ACTIONS REQUIRED:
+- DO NOT make any more search or tool calls
+- DO NOT request additional information
+- Provide a concise final answer using ONLY information already available in this conversation
+- Summarize key findings and conclude the response`;
+    } else if (contextUtilizationPercent >= 75) {
+      contextAwarenessMessage = `
+
+⚠️ CONTEXT BUDGET ALERT: You are at ${contextUtilizationPercent}% context capacity (estimated ${estimatedInputTokens.toLocaleString()} / ${SAFE_INPUT_LIMIT.toLocaleString()} tokens). You have approximately ${estimatedRemainingTokens.toLocaleString()} tokens remaining.
+
+ACTIONS REQUIRED:
+- Limit tool calls to essential operations only (max 3-5 more searches)
+- Prioritize providing answers based on information already gathered
+- Avoid redundant or overlapping searches
+- Begin wrapping up your research`;
+    } else if (contextUtilizationPercent >= 60) {
+      contextAwarenessMessage = `
+
+ℹ️ Context Status: You are at ${contextUtilizationPercent}% context capacity (estimated ${estimatedInputTokens.toLocaleString()} / ${SAFE_INPUT_LIMIT.toLocaleString()} tokens remaining: ${estimatedRemainingTokens.toLocaleString()}). You still have plenty of context available. Continue gathering information as needed, but be strategic about tool usage.`;
+    }
+
     console.log(
       `[Chat API] About to call streamText with model:`,
       selectedModel
@@ -455,6 +610,11 @@ export async function POST(req: Request) {
         userId: user?.id,
         userTier,
         sessionId,
+        // Context tracking (NEW: complete breakdown)
+        estimatedInputTokens, // Total input tokens so far (system + tools + messages)
+        systemPromptTokens, // System prompt tokens (constant per request)
+        toolDefinitionTokens, // Tool definition overhead (constant)
+        totalMessageTokens, // All message content tokens
       },
       providerOptions: {
         openai: {
@@ -464,8 +624,39 @@ export async function POST(req: Request) {
           include: ["reasoning.encrypted_content"],
         },
       },
-      system: `You are a specialized AI assistant with access to comprehensive tools for clinical trials, drug information, biomedical literature, pharmaceutical analysis, Python code execution, and data visualization.
-      
+      system: `You are a specialized AI assistant with access to comprehensive tools for clinical trials, drug information, biomedical literature, pharmaceutical analysis, Python code execution, and data visualization.${contextAwarenessMessage}
+
+      CRITICAL FORMATTING INSTRUCTIONS:
+      - ALWAYS use proper paragraph breaks (blank lines) to separate distinct ideas, topics, or sections
+      - Break up long blocks of text into readable paragraphs (3-5 sentences each)
+      - Use markdown formatting: headers (##, ###), bullet points, numbered lists, and bold text for emphasis
+      - Never generate wall-of-text responses - readability is critical
+
+      CRITICAL SEARCH QUERY INSTRUCTIONS:
+      - When using the webSearch tool, ALWAYS use natural language queries
+      - NEVER use search operator syntax like "site:", "intitle:", "filetype:", etc.
+      - The search API handles query optimization automatically - just describe what you want to find
+      - Example CORRECT: "carbon pricing policies in G20 countries 2025"
+      - Example WRONG: "site:gov carbon pricing G20 2025" or "intitle:carbon pricing"
+      - Keep queries natural and conversational
+
+      CRITICAL CONTEXT WINDOW MONITORING:
+      - You will receive context window status updates after each search tool call
+      - The tool response includes: "Context: X% used, ~Y tokens remaining"
+
+      **PARALLEL SEARCH STRATEGY (IMPORTANT for speed and efficiency):**
+      - When context is BELOW 60%: Make 3-5 parallel searches at once (max 5) for maximum speed
+      - When context is 60-75%: You can still do 2-3 parallel searches, just be more selective
+      - When you see "CONTEXT HIGH (75%+)": Switch to sequential searches, limit to 3-5 more total, reduce maxNumResults to 3-5
+      - When you see "CONTEXT CRITICAL (90%+)": DO NOT make any more searches, wrap up immediately
+
+      **WHY PARALLEL SEARCHES MATTER:**
+      - Parallel searches are MUCH faster (5 parallel searches = ~same time as 1 search)
+      - You should default to parallel searches unless context is high or user needs only one specific thing
+      - When gathering data for tables/comparisons (like "compare X across Y countries"), ALWAYS use parallel searches
+      - Use the context feedback to self-regulate your research depth and avoid hitting the 400k token limit
+      - The webSearch tool accepts maxNumResults parameter (1-20, default 10) - reduce this when context is high to save tokens
+
       CRITICAL CITATION INSTRUCTIONS:
       When you use ANY search tool (financial, web, or Wiley academic search) and reference information from the results in your response:
       
@@ -484,8 +675,15 @@ export async function POST(req: Request) {
       Example of PROPER citation usage:
       "Tesla reported revenue of $24.9 billion in Q3 2023, representing a 50% year-over-year increase [1]. The company's automotive gross margin reached 19.3%, exceeding analyst expectations [1][2]. Energy storage deployments surged 90% compared to the previous year [3]. These results demonstrate Tesla's strong operational performance across multiple business segments [1][2][3]."
       
+      **CRITICAL TOOL USAGE RESTRICTIONS:**
+      - NEVER use readTextFromUrl, parsePdfFromUrl, or parseDocxFromUrl for stock prices, financial data, or market data
+      - These tools fetch RAW data files (CSV, PDF, etc.) that are TOO LARGE and will cause context overflow
+      - For stock prices or market data: ALWAYS use webSearch to find recent articles, summaries, and analysis
+      - Example WRONG: readTextFromUrl with Stooq/Yahoo Finance CSV URLs
+      - Example CORRECT: webSearch for "Tesla stock price 2025" or "S&P 500 performance Q1 2025"
+
       You can:
-         
+
          - Execute Python code for biostatistics, clinical data analysis, drug discovery calculations, and scientific computations using the codeExecution tool (runs in a secure Daytona Sandbox)
          - The Python environment can install packages via pip at runtime inside the sandbox (e.g., numpy, pandas, scikit-learn)
          - Visualization libraries (matplotlib, seaborn, plotly) may work inside Daytona. However, by default, prefer the built-in chart creation tool for standard time series and comparisons. Use Daytona for advanced or custom visualizations only when necessary.
@@ -493,7 +691,7 @@ export async function POST(req: Request) {
          - Look up drug information using the drugInformationSearch tool (FDA labels, contraindications, side effects, drug interactions)
          - Search biomedical literature using the biomedicalLiteratureSearch tool (PubMed, ArXiv, peer-reviewed papers)
          - Analyze pharmaceutical companies using the pharmaCompanyAnalysis tool (SEC filings, financial data, competitive intelligence)
-         - Perform comprehensive searches using the comprehensive everythingSearch tool (across all medical data sources)  
+         - Perform comprehensive searches using the comprehensive everythingSearch tool (across all medical data sources)
          - Search the web for general news, medical breakthroughs, and health policy updates using the webSearch tool
          - Search the web for general information using the web search tool (any topic with relevance scoring and cost control)
          - Create interactive charts and visualizations using the chart creation tool (line charts, bar charts, area charts with multiple data series)
@@ -641,6 +839,13 @@ export async function POST(req: Request) {
       ---
       FINAL RESPONSE FORMATTING GUIDELINES:
       When presenting your final response to the user, you MUST format the information in an extremely well-organized and visually appealing way:
+
+      **CRITICAL: PARAGRAPH STRUCTURE**
+      - NEVER write wall-of-text responses
+      - ALWAYS separate paragraphs with blank lines
+      - Keep paragraphs concise (3-5 sentences maximum)
+      - Use a blank line between every paragraph, section, list, and table
+      - Break up dense information into digestible chunks
 
       1. **Use Rich Markdown Formatting:**
          - Use tables for comparative data, financial metrics, and any structured information

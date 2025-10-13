@@ -155,9 +155,9 @@ export function SavedLibrary({
                 );
                 if (!confirmed) return;
                 // TODO: Implement deleteCollection function
-                console.log(
-                  "Delete collection functionality not yet implemented"
-                );
+                // console.log(
+                //   "Delete collection functionality not yet implemented"
+                // );
               }}
             >
               <Trash2 className="h-3 w-3 mr-1" /> Delete

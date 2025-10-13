@@ -305,14 +305,42 @@ function logDedupe(
   unique: number,
   final: any[]
 ) {
-  console.log(`[${tool}] dedupe`, {
-    requestId,
-    raw,
-    mapped,
-    unique,
-    final: final.length,
-    ids: final.map((x: any) => x.id).slice(0, 50),
-  });
+}
+
+// Simplified context tracking - just reads, doesn't mutate
+function getContextWindowStatus(
+  responseText: string,
+  conversationContext?: {
+    estimatedInputTokens?: number;
+    systemPromptTokens?: number;
+    toolDefinitionTokens?: number;
+    totalMessageTokens?: number;
+  }
+): string {
+  if (!conversationContext?.estimatedInputTokens) {
+    return ""; // No context tracking available
+  }
+
+  const SAFE_INPUT_LIMIT = 272000; // 400k - 128k
+
+  // Estimate tokens in this tool response
+  const responseTokens = Math.ceil(responseText.length / 4);
+
+  // Calculate what the NEXT total will be (current + this response)
+  const estimatedNextTotal = conversationContext.estimatedInputTokens + responseTokens;
+  const contextPercent = Math.round((estimatedNextTotal / SAFE_INPUT_LIMIT) * 100);
+  const remainingTokens = SAFE_INPUT_LIMIT - estimatedNextTotal;
+
+  // Return warnings based on projected context usage
+  if (contextPercent >= 90) {
+    return `\n\n🚨 CONTEXT CRITICAL (${contextPercent}%): ~${remainingTokens.toLocaleString()} tokens left. STOP all searches NOW. Answer with existing info.`;
+  } else if (contextPercent >= 75) {
+    return `\n\n⚠️ CONTEXT HIGH (${contextPercent}%): ~${remainingTokens.toLocaleString()} tokens left. Max 3-5 MORE searches. Use maxNumResults=3.`;
+  } else if (contextPercent >= 60) {
+    return `\n\nℹ️ Context at ${contextPercent}%: ~${remainingTokens.toLocaleString()} tokens remaining. Continue strategically.`;
+  }
+
+  return "";
 }
 
 export const everythingTools = {
@@ -781,21 +809,6 @@ export const everythingTools = {
         }),
       }));
 
-      // Log chart creation details
-      console.log("[Chart Creation] Creating chart:", {
-        title,
-        type,
-        xAxisLabel,
-        yAxisLabel,
-        seriesCount: dataSeries.length,
-        totalDataPoints: dataSeries.reduce(
-          (sum, series) => sum + series.data.length,
-          0
-        ),
-        seriesNames: dataSeries.map((s) => s.name),
-        dataSorted: true,
-      });
-
       // Return structured chart data for the UI to render
       const chartData = {
         chartType: type,
@@ -821,12 +834,6 @@ export const everythingTools = {
               : null,
         },
       };
-
-      console.log(
-        "[Chart Creation] Chart data size:",
-        JSON.stringify(chartData).length,
-        "bytes"
-      );
 
       return chartData;
     },
@@ -897,11 +904,6 @@ export const everythingTools = {
       const validations: ValidationItem[] = [];
 
       try {
-        console.log("[Code Execution] Executing Python code:", {
-          description,
-          codeLength: code.length,
-          codePreview: code.substring(0, 100) + "...",
-        });
 
         // Check for reasonable code length
         const lengthOk = code.length <= 10000;
@@ -1023,15 +1025,6 @@ export const everythingTools = {
             try {
               const polarTracker = new PolarEventTracker();
 
-              console.log(
-                "[CodeExecution] Tracking Daytona usage with Polar:",
-                {
-                  userId,
-                  sessionId,
-                  executionTime,
-                }
-              );
-
               await polarTracker.trackDaytonaUsage(
                 userId,
                 sessionId,
@@ -1069,12 +1062,6 @@ export const everythingTools = {
               helpfulError
             )}`;
           }
-
-          console.log("[Code Execution] Success:", {
-            outputLength: execution.result?.length || 0,
-            executionTime,
-            hasArtifacts: !!execution.artifacts,
-          });
 
           // Format the successful execution result
           return `${validationSummary}\n\n🐍 **Python Code Execution (Daytona Sandbox)**
@@ -1115,20 +1102,48 @@ ${escapeModuleTag(execution.result || "(No output produced)")}
 
   webSearch: tool({
     description:
-      "Search the web for general information on any topic using Valyu DeepSearch API with access to both proprietary sources and web content",
+      "Search the web for general information on any topic using Valyu DeepSearch API with access to both proprietary sources and web content. You can control the number of results returned to manage context usage.",
     inputSchema: z.object({
       query: z
         .string()
         .describe(
           'Search query for any topic (e.g., "benefits of renewable energy", "latest AI developments", "climate change solutions")'
         ),
+      maxNumResults: z
+        .number()
+        .min(1)
+        .max(20)
+        .optional()
+        .default(10)
+        .describe(
+          "Maximum number of results to return (1-20). Default is 10. Reduce this (e.g., 3-5) when context window is getting full to save tokens."
+        ),
     }),
-    execute: async ({ query }, options) => {
+    execute: async ({ query, maxNumResults = 10 }, options) => {
       const userId = (options as any)?.experimental_context?.userId;
       const sessionId = (options as any)?.experimental_context?.sessionId;
       const userTier = (options as any)?.experimental_context?.userTier;
       const isDevelopment = process.env.NEXT_PUBLIC_APP_MODE === "development";
       const requestId = (options as any)?.experimental_context?.requestId;
+
+      // AGGRESSIVE SAFETY LIMITS - Block searches at high context
+      const conversationContext = (options as any)?.experimental_context;
+      if (conversationContext?.estimatedInputTokens) {
+        const SAFE_INPUT_LIMIT = 272000;
+        const currentPercent = Math.round(
+          (conversationContext.estimatedInputTokens / SAFE_INPUT_LIMIT) * 100
+        );
+
+        // Block searches at 95%+
+        if (currentPercent >= 95) {
+          return `🚨 CONTEXT EXCEEDED (${currentPercent}%). Cannot search. Provide final answer now with information already gathered.`;
+        }
+
+        // Auto-limit results at high context
+        if (currentPercent >= 80 && maxNumResults > 3) {
+          maxNumResults = 3;
+        }
+      }
 
       try {
         // Initialize Valyu client (uses default/free tier if no API key)
@@ -1140,6 +1155,7 @@ ${escapeModuleTag(execution.result || "(No output produced)")}
         // Configure search options
         const searchOptions = {
           searchType: "all" as const, // Search both proprietary and web sources
+          maxNumResults: maxNumResults,
         };
 
         // Use per-session memo + in-flight dedupe
@@ -1233,12 +1249,6 @@ ${escapeModuleTag(execution.result || "(No output produced)")}
           }
         }
 
-        // Log the full API response for debugging
-        console.log(
-          "[Web Search] Full API Response:",
-          JSON.stringify(response, null, 2)
-        );
-
         if (
           !response ||
           !response.results ||
@@ -1252,6 +1262,7 @@ ${escapeModuleTag(execution.result || "(No output produced)")}
         const metadata = (response as any).metadata;
         console.log("[Web Search] Summary:", {
           query,
+          results: response.results,
           resultCount: final.length,
           totalCost:
             metadata?.totalCost ||
@@ -1286,13 +1297,28 @@ ${escapeModuleTag(execution.result || "(No output produced)")}
           })),
         };
 
-        console.log(
-          "[Web Search] Formatted response size:",
-          JSON.stringify(formattedResponse).length,
-          "bytes"
+        // Get context window status after this search
+        // Pass conversation context from experimental_context if available
+        const conversationContext = (options as any)?.experimental_context
+          ?.estimatedInputTokens !== undefined
+          ? {
+              estimatedInputTokens: (options as any).experimental_context
+                .estimatedInputTokens,
+              systemPromptTokens: (options as any).experimental_context
+                .systemPromptTokens,
+              toolDefinitionTokens: (options as any).experimental_context
+                .toolDefinitionTokens,
+              totalMessageTokens: (options as any).experimental_context
+                .totalMessageTokens,
+            }
+          : undefined;
+
+        const contextStatus = getContextWindowStatus(
+          JSON.stringify(formattedResponse),
+          conversationContext
         );
 
-        return JSON.stringify(formattedResponse, null, 2);
+        return JSON.stringify(formattedResponse, null, 2) + contextStatus;
       } catch (error) {
         if (error instanceof Error) {
           if (
