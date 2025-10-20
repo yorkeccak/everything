@@ -7,6 +7,90 @@ let memoryCache: {
   timestamp: number;
 } | null = null;
 
+const IMAGE_CHECK_TIMEOUT_MS = 5000;
+const IMAGE_CHECK_CONCURRENCY = 10;
+
+async function checkImageWithMethod(url: string, method: "HEAD" | "GET") {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), IMAGE_CHECK_TIMEOUT_MS);
+  try {
+    const response = await fetch(url, {
+      method,
+      signal: controller.signal,
+      redirect: "follow",
+      headers:
+        method === "GET"
+          ? {
+              Range: "bytes=0-0",
+              "User-Agent":
+                "Mozilla/5.0 (compatible; EverythingBot/1.0; +https://everything.valyu.ai)",
+              Accept: "image/*",
+            }
+          : {
+              "User-Agent":
+                "Mozilla/5.0 (compatible; EverythingBot/1.0; +https://everything.valyu.ai)",
+              Accept: "image/*",
+            },
+      cache: "no-store",
+    });
+    return response.ok;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function isValidRemoteImage(url: string) {
+  if (!url.startsWith("http")) {
+    return false;
+  }
+  if (await checkImageWithMethod(url, "HEAD")) {
+    return true;
+  }
+  return checkImageWithMethod(url, "GET");
+}
+
+async function resolveValidImageUrl(imageUrl: any) {
+  if (!imageUrl) {
+    return null;
+  }
+
+  const candidates: string[] = [];
+  if (typeof imageUrl === "string") {
+    candidates.push(imageUrl);
+  } else if (typeof imageUrl === "object") {
+    for (const value of Object.values(imageUrl)) {
+      if (typeof value === "string") {
+        candidates.push(value);
+      }
+    }
+  }
+
+  for (const candidate of candidates) {
+    if (await isValidRemoteImage(candidate)) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
+async function attachValidatedImages(items: any[]) {
+  const validated: any[] = [];
+  for (let i = 0; i < items.length; i += IMAGE_CHECK_CONCURRENCY) {
+    const chunk = items.slice(i, i + IMAGE_CHECK_CONCURRENCY);
+    const processed = await Promise.all(
+      chunk.map(async (item) => ({
+        ...item,
+        image_url: await resolveValidImageUrl(item.image_url),
+      }))
+    );
+    validated.push(...processed);
+  }
+  return validated;
+}
+
 async function fetchNewsData() {
   const valyuApiKey = process.env.VALYU_API_KEY;
 
@@ -81,7 +165,9 @@ async function fetchNewsData() {
     // Limit to 30 articles for performance
     .slice(0, 30);
 
-  return newsItems;
+  const validated = await attachValidatedImages(newsItems);
+
+  return validated;
 }
 
 export async function GET(request: NextRequest) {
