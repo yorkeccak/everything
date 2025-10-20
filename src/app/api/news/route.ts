@@ -30,32 +30,19 @@ async function fetchNewsData() {
     "world sports news today",
   ];
 
-  console.log("Running news queries...");
-
   // Try multiple queries to get diverse news content
   let allResults: any[] = [];
   for (const query of newsQueries) {
     try {
-      console.log(`Searching for: ${query}`);
       const response = await valyu.search(query);
-      console.log(
-        `Response for "${query}":`,
-        response?.results?.length || 0,
-        "results"
-      );
       if (response?.results && response.results.length > 0) {
         allResults = [...allResults, ...response.results];
-        console.log(
-          `Added ${response.results.length} results, total: ${allResults.length}`
-        );
       }
     } catch (queryError) {
       console.error(`Error with query "${query}":`, queryError);
       // Continue with other queries
     }
   }
-
-  console.log(`Total results collected: ${allResults.length}`);
 
   if (allResults.length === 0) {
     throw new Error("No news articles found");
@@ -94,8 +81,6 @@ async function fetchNewsData() {
     // Limit to 30 articles for performance
     .slice(0, 30);
 
-  console.log(`Final news items: ${newsItems.length}`);
-
   return newsItems;
 }
 
@@ -110,7 +95,6 @@ export async function GET(request: NextRequest) {
     if (memoryCache && !refresh) {
       const cacheAge = Date.now() - memoryCache.timestamp;
       if (cacheAge < oneHour) {
-        console.log("Returning cached data from memory");
         return NextResponse.json({
           newsItems: memoryCache.newsItems,
           total: memoryCache.newsItems.length,
@@ -129,7 +113,6 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-      console.log("Fetching fresh news data...");
       const newsItems = await fetchNewsData();
 
       // Update in-memory cache
@@ -148,7 +131,6 @@ export async function GET(request: NextRequest) {
 
       // If we have stale cache, return it with a warning
       if (memoryCache) {
-        console.log("Returning stale cache due to error");
         return NextResponse.json({
           newsItems: memoryCache.newsItems,
           total: memoryCache.newsItems.length,

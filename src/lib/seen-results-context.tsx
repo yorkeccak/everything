@@ -55,12 +55,6 @@ export function SeenResultsProvider({
       clear: () => storeRef.current.clear(),
       sessionKey,
     };
-    console.log(
-      "[SeenResults] session =",
-      sessionKey,
-      "size =",
-      storeRef.current.size
-    );
   }, [sessionKey]);
 
   const api = useMemo<SeenResultsState>(
@@ -91,4 +85,3 @@ export function useSeenResults() {
     throw new Error("useSeenResults must be used within SeenResultsProvider");
   return ctx;
 }
- 
