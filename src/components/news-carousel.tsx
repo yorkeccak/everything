@@ -240,14 +240,6 @@ const NewsCarouselComponent = () => {
     );
   }
 
-  // Ensure we have enough items for smooth looping
-  const minItemsForLoop = 5;
-  if (imageUrlPairs.length < minItemsForLoop) {
-    // console.log(
-    //   `Only ${imageUrlPairs.length} items available, may not loop smoothly`
-    // );
-  }
-
   return (
     <div
       className="w-full h-24 overflow-hidden relative bg-gray-50 dark:bg-gray-900/50 rounded-lg mb-4"

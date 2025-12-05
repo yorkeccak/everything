@@ -7,6 +7,90 @@ let memoryCache: {
   timestamp: number;
 } | null = null;
 
+const IMAGE_CHECK_TIMEOUT_MS = 5000;
+const IMAGE_CHECK_CONCURRENCY = 10;
+
+async function checkImageWithMethod(url: string, method: "HEAD" | "GET") {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), IMAGE_CHECK_TIMEOUT_MS);
+  try {
+    const response = await fetch(url, {
+      method,
+      signal: controller.signal,
+      redirect: "follow",
+      headers:
+        method === "GET"
+          ? {
+              Range: "bytes=0-0",
+              "User-Agent":
+                "Mozilla/5.0 (compatible; EverythingBot/1.0; +https://everything.valyu.ai)",
+              Accept: "image/*",
+            }
+          : {
+              "User-Agent":
+                "Mozilla/5.0 (compatible; EverythingBot/1.0; +https://everything.valyu.ai)",
+              Accept: "image/*",
+            },
+      cache: "no-store",
+    });
+    return response.ok;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function isValidRemoteImage(url: string) {
+  if (!url.startsWith("http")) {
+    return false;
+  }
+  if (await checkImageWithMethod(url, "HEAD")) {
+    return true;
+  }
+  return checkImageWithMethod(url, "GET");
+}
+
+async function resolveValidImageUrl(imageUrl: any) {
+  if (!imageUrl) {
+    return null;
+  }
+
+  const candidates: string[] = [];
+  if (typeof imageUrl === "string") {
+    candidates.push(imageUrl);
+  } else if (typeof imageUrl === "object") {
+    for (const value of Object.values(imageUrl)) {
+      if (typeof value === "string") {
+        candidates.push(value);
+      }
+    }
+  }
+
+  for (const candidate of candidates) {
+    if (await isValidRemoteImage(candidate)) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
+async function attachValidatedImages(items: any[]) {
+  const validated: any[] = [];
+  for (let i = 0; i < items.length; i += IMAGE_CHECK_CONCURRENCY) {
+    const chunk = items.slice(i, i + IMAGE_CHECK_CONCURRENCY);
+    const processed = await Promise.all(
+      chunk.map(async (item) => ({
+        ...item,
+        image_url: await resolveValidImageUrl(item.image_url),
+      }))
+    );
+    validated.push(...processed);
+  }
+  return validated;
+}
+
 async function fetchNewsData() {
   const valyuApiKey = process.env.VALYU_API_KEY;
 
@@ -30,32 +114,19 @@ async function fetchNewsData() {
     "world sports news today",
   ];
 
-  console.log("Running news queries...");
-
   // Try multiple queries to get diverse news content
   let allResults: any[] = [];
   for (const query of newsQueries) {
     try {
-      console.log(`Searching for: ${query}`);
       const response = await valyu.search(query);
-      console.log(
-        `Response for "${query}":`,
-        response?.results?.length || 0,
-        "results"
-      );
       if (response?.results && response.results.length > 0) {
         allResults = [...allResults, ...response.results];
-        console.log(
-          `Added ${response.results.length} results, total: ${allResults.length}`
-        );
       }
     } catch (queryError) {
       console.error(`Error with query "${query}":`, queryError);
       // Continue with other queries
     }
   }
-
-  console.log(`Total results collected: ${allResults.length}`);
 
   if (allResults.length === 0) {
     throw new Error("No news articles found");
@@ -94,9 +165,9 @@ async function fetchNewsData() {
     // Limit to 30 articles for performance
     .slice(0, 30);
 
-  console.log(`Final news items: ${newsItems.length}`);
+  const validated = await attachValidatedImages(newsItems);
 
-  return newsItems;
+  return validated;
 }
 
 export async function GET(request: NextRequest) {
@@ -110,7 +181,6 @@ export async function GET(request: NextRequest) {
     if (memoryCache && !refresh) {
       const cacheAge = Date.now() - memoryCache.timestamp;
       if (cacheAge < oneHour) {
-        console.log("Returning cached data from memory");
         return NextResponse.json({
           newsItems: memoryCache.newsItems,
           total: memoryCache.newsItems.length,
@@ -129,7 +199,6 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-      console.log("Fetching fresh news data...");
       const newsItems = await fetchNewsData();
 
       // Update in-memory cache
@@ -148,7 +217,6 @@ export async function GET(request: NextRequest) {
 
       // If we have stale cache, return it with a warning
       if (memoryCache) {
-        console.log("Returning stale cache due to error");
         return NextResponse.json({
           newsItems: memoryCache.newsItems,
           total: memoryCache.newsItems.length,

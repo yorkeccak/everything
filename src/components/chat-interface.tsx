@@ -2447,9 +2447,7 @@ export function ChatInterface({
                   part?.type === "text" ? { ...part, text: enrichedText } : part
                 );
 
-                if (
-                  !updatedParts.some((part: any) => part?.type === "text")
-                ) {
+                if (!updatedParts.some((part: any) => part?.type === "text")) {
                   updatedParts.push({ type: "text", text: enrichedText });
                 }
 
@@ -2565,9 +2563,7 @@ export function ChatInterface({
               .map((msg) => msg.role)
               .lastIndexOf("user");
             const targetIndex =
-              lastUserIndex >= 0
-                ? lastUserIndex
-                : enrichedMessages.length - 1;
+              lastUserIndex >= 0 ? lastUserIndex : enrichedMessages.length - 1;
 
             if (targetIndex >= 0) {
               const targetMessage: any = {
@@ -2595,8 +2591,11 @@ export function ChatInterface({
                     (part: any) =>
                       part?.type === "image" || part?.type === "file"
                   )
-                  .map((part: any) =>
-                    `${part.type}:${part.filename || part.mimeType || part.mediaType || ""}`
+                  .map(
+                    (part: any) =>
+                      `${part.type}:${
+                        part.filename || part.mimeType || part.mediaType || ""
+                      }`
                   )
               );
 
@@ -2604,7 +2603,9 @@ export function ChatInterface({
                 ...existingParts,
                 ...attachmentParts.filter((part: any) => {
                   if (part?.type === "image" || part?.type === "file") {
-                    const signature = `${part.type}:${part.filename || part.mimeType || part.mediaType || ""}`;
+                    const signature = `${part.type}:${
+                      part.filename || part.mimeType || part.mediaType || ""
+                    }`;
                     if (mediaSignature.has(signature)) {
                       return false;
                     }
@@ -2689,9 +2690,7 @@ export function ChatInterface({
       idsChanged && hasPendingContext
         ? [...messages]
             .reverse()
-            .find(
-              (msg) => !prevIds.includes(msg.id) && msg.role === "user"
-            )
+            .find((msg) => !prevIds.includes(msg.id) && msg.role === "user")
         : null;
 
     setContextResourceMap((prev) => {
@@ -3616,7 +3615,6 @@ export function ChatInterface({
                               handlePromptClick(
                                 "Search for the latest news on bio and pharmeceutical research"
                               );
-        
                             }}
                             className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline dark:hover:text-blue-300 transition-colors cursor-pointer"
                           >
