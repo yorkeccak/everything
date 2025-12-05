@@ -4119,12 +4119,15 @@ export function ChatInterface({
                                 let currentReasoningGroup: any[] = [];
 
                                 message.parts.forEach((part, index) => {
-                                  if (
-                                    part.type === "reasoning" &&
-                                    part.text &&
-                                    part.text.trim() !== ""
-                                  ) {
-                                    currentReasoningGroup.push({ part, index });
+                                  if (part.type === "reasoning") {
+                                    // Include reasoning even if text is empty (might be streaming)
+                                    // Only skip if it's completed and still has no text
+                                    const hasText = part.text && part.text.trim() !== "";
+                                    const isStreaming = part.state === "streaming" || status === "streaming";
+
+                                    if (hasText || isStreaming) {
+                                      currentReasoningGroup.push({ part, index });
+                                    }
                                   } else {
                                     if (currentReasoningGroup.length > 0) {
                                       groupedParts.push({

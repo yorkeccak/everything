@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo, memo, useCallback } from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
 
@@ -12,7 +12,7 @@ interface NewsItem {
   date?: string;
 }
 
-export function NewsCarousel() {
+const NewsCarouselComponent = () => {
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [isHovered, setIsHovered] = useState(false);
@@ -22,6 +22,7 @@ export function NewsCarousel() {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState(0);
   const [dragOffset, setDragOffset] = useState(0);
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
   const motionRef = useRef<HTMLDivElement>(null);
 
   // Handle touch/mouse events for manual scrolling
@@ -153,7 +154,7 @@ export function NewsCarousel() {
   };
 
   // Function to generate images with their corresponding news URLs
-  const generateImagesWithUrls = (
+  const generateImagesWithUrls = useCallback((
     newsData: NewsItem[]
   ): { image: string; url: string; title: string; source: string }[] => {
     const imageUrlPairs: {
@@ -202,6 +203,19 @@ export function NewsCarousel() {
     );
 
     return uniquePairs;
+  }, []);
+
+  // Memoize image pairs to prevent recalculation on every render
+  const imageUrlPairs = useMemo(() => {
+    if (newsItems.length === 0) return [];
+    const pairs = generateImagesWithUrls(newsItems);
+    // Filter out failed images
+    return pairs.filter(pair => !failedImages.has(pair.image));
+  }, [newsItems, failedImages, generateImagesWithUrls]);
+
+  // Handle image load errors
+  const handleImageError = (imageUrl: string) => {
+    setFailedImages(prev => new Set(prev).add(imageUrl));
   };
 
   if (loading) {
@@ -215,8 +229,6 @@ export function NewsCarousel() {
   if (newsItems.length === 0) {
     return null;
   }
-
-  const imageUrlPairs = generateImagesWithUrls(newsItems);
 
   if (imageUrlPairs.length === 0) {
     return (
@@ -282,6 +294,8 @@ export function NewsCarousel() {
                 alt={item.title}
                 fill
                 className="object-cover group-hover:scale-110 transition-transform duration-300"
+                unoptimized
+                onError={() => handleImageError(item.image)}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 p-2 text-white">
@@ -310,6 +324,8 @@ export function NewsCarousel() {
                 alt={item.title}
                 fill
                 className="object-cover group-hover:scale-110 transition-transform duration-300"
+                unoptimized
+                onError={() => handleImageError(item.image)}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 p-2 text-white">
@@ -324,4 +340,7 @@ export function NewsCarousel() {
       </motion.div>
     </div>
   );
-}
+};
+
+// Memoize to prevent re-renders when parent component updates
+export const NewsCarousel = memo(NewsCarouselComponent);
